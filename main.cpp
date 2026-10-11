@@ -7,6 +7,7 @@
 #include "COMIDA.H"
 #include "COLAS_CON_PRIORIDAD.H"
 
+
 int main()
 {
     // Inicializar la semilla aleatoria basada en el tiempo actual
