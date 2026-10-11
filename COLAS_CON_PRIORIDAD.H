@@ -14,6 +14,7 @@
 
 #include <iostream>
 #include "COMIDA.H"
+#include "COLA.H"
 
 
 #endif
