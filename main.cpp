@@ -4,10 +4,8 @@
 #include <ctime>   // Para time(), osea la semilla.
 #include "BICHITO.H"
 #include "PILA_DINAMICA.H"
-
-#include <iostream>
-#include "BICHITO.H"
-#include "PILA_DINAMICA.H"
+#include "COMIDA.H"
+#include "COLAS_CON_PRIORIDAD.H"
 
 int main()
 {

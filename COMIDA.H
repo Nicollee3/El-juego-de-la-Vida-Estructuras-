@@ -18,6 +18,15 @@ private:
 
 public:
     /*
+     * @brief Constructor por defecto.
+     */
+    Comida()
+    {
+        id = 0;
+        prioridad = 3; 
+        puntos_de_vida = 10; 
+    }
+    /*
      * @brief Constructor parametrizado de la clase Comida.
      * @param _id Identificador único para la comida.
      * @param _prioridad Nivel de prioridad inicial.
