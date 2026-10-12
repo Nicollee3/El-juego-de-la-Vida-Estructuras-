@@ -1,62 +1,32 @@
 #include <iostream>
-#include <iostream>
-#include <cstdlib> // Para rand()
-#include <ctime>   // Para time(), osea la semilla.
-#include "Bichito.h"
+#include <cstdlib>
+#include <ctime>
 #include "PilaDinamica.h"
-#include "Comida.h"
-#include "ColaConPrioridad.h"
-
+#include "MotorGrafico.h"
 
 int main()
 {
-    // Inicializar la semilla aleatoria basada en el tiempo actual
-    std::srand(std::time(0));
+    std::srand(static_cast<unsigned int>(std::time(0)));
 
-    std::cout << "SIMULACION DE BICHITOS - DEMOSTRACION\n";
-    PilaDinamica poblacion; // INICIALIZAR LA PILA
-    std::cout << "Pila dinamica inicializada correctamente.\n";
-    std::cout << "-> Capacidad inicial y longitud actual: " << poblacion.longitud() << "\n\n";
+    std::cout << "========================================\n";
+    std::cout << "  SIMULADOR DE VIDA 2D - MOTOR GRAFICO \n";
+    std::cout << "========================================\n";
+    std::cout << "Controles:\n";
+    std::cout << " [1] Cargar Escenario Competencia (N agentes por 1 comida)\n";
+    std::cout << " [2] Cargar Escenario Reproduccion (2 agentes cercanos)\n";
+    std::cout << " [Click Izquierdo] Generar comida en la posicion del cursor\n";
+    std::cout << "========================================\n\n";
 
-    // GENERACION AUTOMATICA DE BICHITOS
+    PilaDinamica poblacion;
 
-    int cantidad_a_generar = 100;
-    std::cout << "--- 1. GENERANDO " << cantidad_a_generar << " BICHITOS ALEATORIAMENTE ---\n";
+    // Crear el motor grafico de 1000x700
+    MotorGrafico motor(poblacion, 1000, 700);
 
-    for (int i = 1; i <= cantidad_a_generar; i++)
-    {
-        int vida_aleatoria = std::rand() % 101; // Genera un número de 0 a 100
-        poblacion.generar(Bichito(i, vida_aleatoria));
-    }
-    std::cout << "Poblacion generada con exito. Total actual: " << poblacion.longitud() << " bichitos.\n";
-    std::cout << "Listado de la poblacion inicial:\n";
-    for (int i = 0; i < poblacion.longitud(); i++)
-    {
-        Bichito b = poblacion.obtener(i);
-        std::cout << "  [Indice " << i << "] -> ID: " << b.id << " | Vida: " << b.vida << "\n";
-    }
-    std::cout << "\n";
+    // Iniciar con el Escenario 1 por defecto (5 agentes compitiendo)
+    motor.cargarEscenarioCompetencia(5);
 
-    // 4. MATAR UN BICHITO
-    {
-        std::cout << "--- 3. SIMULANDO MUERTE ---\n";
-        int indice_a_eliminar = 3;
-        Bichito que_morira = poblacion.obtener(indice_a_eliminar);
-        std::cout << "El bichito en el indice " << indice_a_eliminar << " (ID: " << que_morira.id << ", Vida: " << que_morira.vida << ") ha muerto.\n";
-        poblacion.morir(indice_a_eliminar);
-
-        std::cout << "Poblacion tras la eliminacion (" << poblacion.longitud() << " bichitos):\n";
-        for (int i = 0; i < poblacion.longitud(); i++)
-        {
-            Bichito b = poblacion.obtener(i);
-            std::cout << "  [Indice " << i << "] -> ID: " << b.id << " | Vida: " << b.vida << "\n";
-        }
-        std::cout << "\n";
-    }
-
-    std::cout << "\n==================================================\n";
-    std::cout << "===       DEMOSTRACION FINALIZADA CON EXITO    ===\n";
-    std::cout << "==================================================\n";
+    // Iniciar el bucle principal de la simulacion
+    motor.ejecutar();
 
     return 0;
 }

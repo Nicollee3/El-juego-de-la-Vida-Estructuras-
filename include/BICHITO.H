@@ -9,72 +9,78 @@
 #ifndef BICHITO_H
 #define BICHITO_H
 
+#include <cmath>
+
+enum class EstadoBichito { BuscandoComida, BuscandoPareja, DePaseo };
+
 class Bichito
 {
 private:
     int id;
-    int vida;
+    float vida;
+    float x, y;
+    float targetX, targetY;
+    float velocidad;
+    EstadoBichito estado;
+    
+    // Control de reproducción
+    float tiempoCercaPareja;
+    int idParejaObjetivo;
+    float cooldownReproduccion;
+
 public:
-    Bichito()
-    /*
-     * @brief Constructor por defecto.
-     */
-    {
-        id = 0;
-        vida = 30;
-    }
-    /*
-     * @brief Constructor parametrizado.
-     * @param _id Identificador único.
-     * @param _vida Vida inicial del bichito.
-     */
-    Bichito(int _id, int _vida)
-    {
-        id = _id;
-        vida = _vida;
-    }
-    // GETTERS
-    /*
-     * @brief Obtiene el ID del bichito.
-     * @return int El ID.
-     */
-    int getId() const
-    {
-        return id;
-    }
+    Bichito() 
+        : id(0), vida(30.0f), x(0.0f), y(0.0f), targetX(0.0f), targetY(0.0f),
+          velocidad(120.0f), estado(EstadoBichito::BuscandoComida),
+          tiempoCercaPareja(0.0f), idParejaObjetivo(-1), cooldownReproduccion(0.0f) {}
 
-    /*
-     * @brief Obtiene la vida actual del bichito.
-     * @return int Los puntos de vida.
-     */
-    int getVida() const
-    {
-        return vida;
-    }
-    // SETTERS
+    Bichito(int _id, float _vida, float _x = 0.0f, float _y = 0.0f) 
+        : id(_id), vida(_vida), x(_x), y(_y), targetX(_x), targetY(_y),
+          velocidad(120.0f), estado(EstadoBichito::BuscandoComida),
+          tiempoCercaPareja(0.0f), idParejaObjetivo(-1), cooldownReproduccion(0.0f) {}
 
-    /*
-     * @brief Modifica el ID del bichito.
-     * @param _id Nuevo ID.
-     */
-    void setId(int _id)
-    {
-        id = _id;
-    }
-    /*
-     * @brief Modifica la vida del bichito validando que esté estrictamente entre 0 y 100.
-     * @param _vida Nueva cantidad de vida.
-     * @return true Si la vida está en el rango permitido y se actualizó.
-     * @return false Si el valor está fuera del rango de 0 a 100.
-     */
-    bool setVida(int _vida)
-    {
-        if (_vida >= 0 && _vida <= 100)
-        {
+    // Getters
+    int getId() const { return id; }
+    float getVida() const { return vida; }
+    float getX() const { return x; }
+    float getY() const { return y; }
+    float getTargetX() const { return targetX; }
+    float getTargetY() const { return targetY; }
+    float getVelocidad() const { return velocidad; }
+    EstadoBichito getEstado() const { return estado; }
+    float getTiempoCercaPareja() const { return tiempoCercaPareja; }
+    int getIdParejaObjetivo() const { return idParejaObjetivo; }
+    float getCooldownReproduccion() const { return cooldownReproduccion; }
+
+    // Setters
+    void setId(int _id) { id = _id; }
+    bool setVida(float _vida) {
+        if (_vida >= 0.0f && _vida <= 200.0f) {
             vida = _vida;
             return true;
         }
-        return false; 
+        return false;
+    }
+    void setPosicion(float _x, float _y) { x = _x; y = _y; }
+    void setTarget(float _tx, float _ty) { targetX = _tx; targetY = _ty; }
+    void setVelocidad(float _v) { velocidad = _v; }
+    void setEstado(EstadoBichito _e) { estado = _e; }
+    void setTiempoCercaPareja(float _t) { tiempoCercaPareja = _t; }
+    void setIdParejaObjetivo(int _idP) { idParejaObjetivo = _idP; }
+    void setCooldownReproduccion(float _cd) { cooldownReproduccion = _cd; }
+
+    // Movimiento continuo en línea recta hacia el objetivo
+    void moverHaciaObjetivo(float dt) {
+        float dx = targetX - x;
+        float dy = targetY - y;
+        float dist = std::sqrt(dx * dx + dy * dy);
+
+        if (dist > 2.0f) {
+            float dirX = dx / dist;
+            float dirY = dy / dist;
+            x += dirX * velocidad * dt;
+            y += dirY * velocidad * dt;
+        }
     }
 };
 

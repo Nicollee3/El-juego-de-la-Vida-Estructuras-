@@ -124,6 +124,16 @@ public:
         return poblacion[i];
     };
 
+    Bichito& obtenerRef(int i)
+    {
+        if (i < 0 || i >= N)
+        {
+            static Bichito centinela(-1, -1);
+            return centinela;
+        }
+        return poblacion[i];
+    }
+    
 protected:
     Bichito *poblacion; // Poblacion es un apuntador, que esta apuntando a la direccion de memoria donde estan guardados los objetos bichito
     int N;
