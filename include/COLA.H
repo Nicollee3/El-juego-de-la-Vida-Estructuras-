@@ -1,5 +1,5 @@
 /*
- * @file COLA.H
+ * @file Cola.h
  * @brief Implementación de una Cola.
  * @details Sigue el principio FIFO.
  * @author Karoll Ramírez
@@ -10,7 +10,7 @@
 #define COLA_H
 
 #include <iostream>
-#include "COMIDA.H"
+#include "Comida.h"
 
 /*
  * @class NodoLista

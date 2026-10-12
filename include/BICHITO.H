@@ -1,5 +1,5 @@
 /*
- * @file BICHITO.H
+ * @file Bichito.h
  * @brief Representa a cada bichito dentro del juego de la vida.
  * @details Tiene atributos privados de identificación y de cuánta vida tiene. Cuenta con setters y getters con validaciones.
  * @author Karoll Ramírez

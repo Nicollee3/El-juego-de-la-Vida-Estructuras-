@@ -1,5 +1,5 @@
 /*
- * @file COLA_CIRCULAR.H
+ * @file ColaCircular.h
  * @brief Implementación de una Cola Circular de tamaño fijo para gestionar las Estaciones del Año.
  * @details Utiliza un arreglo estático de 4 elementos y el operador de residuo (%) para 
  *          garantizar que el ciclo de estaciones rote infinitamente (Primavera -> Verano -> Otoño -> Invierno).

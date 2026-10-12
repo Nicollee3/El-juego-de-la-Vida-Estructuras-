@@ -2,10 +2,10 @@
 #include <iostream>
 #include <cstdlib> // Para rand()
 #include <ctime>   // Para time(), osea la semilla.
-#include "BICHITO.H"
-#include "PILA_DINAMICA.H"
-#include "COMIDA.H"
-#include "COLAS_CON_PRIORIDAD.H"
+#include "Bichito.h"
+#include "PilaDinamica.h"
+#include "Comida.h"
+#include "ColaConPrioridad.h"
 
 
 int main()

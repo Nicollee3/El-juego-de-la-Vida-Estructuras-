@@ -1,5 +1,5 @@
 /*
- * @file COMIDA.H
+ * @file Comida.h
  * @brief Representa a la comida en el juego.
  * @details Tiene atributos privados de su id, prioridad y puntos de vida.
  *          Tiene métodos públicos para obtener y modificar estos atributos.
