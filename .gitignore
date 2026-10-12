@@ -1,1 +1,29 @@
+# NO BORRAR
+# Este archivo se encarga de evitar que se suban archivos innecesarios al repositorio
+
+# Carpetas de compilación
+**/build/
+**/bin/
+**/out/
+
+# Archivos de entorno, llaves y variables secretas
+.env
+.env.local
+*.pem
+
+# Configuraciones del IDE
+.vscode/
+.idea/
+*.user
+
+# Ejecutables y objetos binarios
 *.exe
+*.o
+*.obj
+*.dll
+*.so
+*.dylib
+
+# Archivos del Sistema Operativo
+.DS_Store
+Thumbs.db
