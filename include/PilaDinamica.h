@@ -1,5 +1,5 @@
 /*
- * @file PILA_DINAMICA.H
+ * @file PilaDinamica.h
  * @brief Implementación de estructura de datos lineal de tipo PILA utilizando arreglo dinámico
  * @details Aquí se gestiona un arreglo dinámico de BICHITOS. Podemos agregar y eliminar objetos.
  *          El tamaño del arreglo se ajusta de manera dinámica de acuerdo a la cantidad de elementos apoyándose en la proporción áurea.
@@ -13,7 +13,7 @@
 #define PILA_DINAMICA_H
 
 #include <iostream>
-#include "BICHITO.H"
+#include "Bichito.h"
 
 class PilaDinamica
 {
@@ -124,6 +124,16 @@ public:
         return poblacion[i];
     };
 
+    Bichito& obtenerRef(int i)
+    {
+        if (i < 0 || i >= N)
+        {
+            static Bichito centinela(-1, -1);
+            return centinela;
+        }
+        return poblacion[i];
+    }
+    
 protected:
     Bichito *poblacion; // Poblacion es un apuntador, que esta apuntando a la direccion de memoria donde estan guardados los objetos bichito
     int N;

@@ -1,6 +1,6 @@
 
 /*
- * @file COLAS_CON_PRIORIDAD.H
+ * @file ColaConPrioridad.h
  * @brief Gestiona la comida del juego mediante 3 niveles de prioridad por medio de colas.
  * @details Aquí se gestiona un arreglo estático de 3 colas de COMIDA de acuerdo a la prioridad de cada elemento. (3 niveles)
  *
@@ -13,8 +13,8 @@
 #define COLA_CON_PRIORIDAD_H
 
 #include <iostream>
-#include "COMIDA.H"
-#include "COLA.H"
+#include "Comida.h"
+#include "Cola.h"
 
 class ColaConPrioridad
 {
