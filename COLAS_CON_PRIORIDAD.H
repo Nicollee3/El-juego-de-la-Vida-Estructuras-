@@ -1,3 +1,4 @@
+
 /*
  * @file COLAS_CON_PRIORIDAD.H
  * @brief Gestiona la comida del juego mediante 3 niveles de prioridad por medio de colas.
