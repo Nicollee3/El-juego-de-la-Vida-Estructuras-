@@ -124,6 +124,15 @@ public:
         return poblacion[i];
     };
 
+    /*
+     * @brief Devuelve la capacidad actual del arreglo dinámico (no la cantidad de elementos).
+     * @return int Tamaño reservado en memoria (tamano). Se usa para mostrarlo en la barra lateral.
+     */
+    int capacidad()
+    {
+        return tamano;
+    }
+
     Bichito& obtenerRef(int i)
     {
         if (i < 0 || i >= N)

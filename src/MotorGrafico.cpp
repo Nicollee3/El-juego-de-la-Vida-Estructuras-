@@ -1,16 +1,75 @@
 #include "MotorGrafico.h"
-#include <iostream>
+#include "gui/Config.h"
+#include "gui/GestorRecursos.h"
+#include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdlib>
+#include <iostream>
+#include <string>
 
-MotorGrafico::MotorGrafico(PilaDinamica& _poblacion, unsigned int ancho, unsigned int alto)
-    : poblacion(_poblacion),
-      ventana(sf::VideoMode(ancho, alto), "Simulador de Vida 2D - Motor Grafico SFML"),
+namespace
+{
+    // NUEVO (corrige un error): Bichito::setVida RECHAZA valores fuera de 0..200 y no hace nada.
+    // Antes, cuando la vida iba a quedar negativa, la resta se ignoraba y el bichito nunca moría.
+    // Esta función limita el resultado al rango válido antes de llamar a setVida.
+    void cambiarVida(Bichito& b, float delta)
+    {
+        float nueva = b.getVida() + delta;
+        if (nueva < 0.0f) nueva = 0.0f;
+        if (nueva > 200.0f) nueva = 200.0f;
+        b.setVida(nueva);
+    }
+
+    std::string enMinusculas(std::string s)
+    {
+        std::transform(s.begin(), s.end(), s.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return s;
+    }
+
+    // Colores de reemplazo (solo se ven mientras no existan tus PNG).
+    sf::Color colorFondoEstacion(const std::string& estacion)
+    {
+        if (estacion == "primavera") return sf::Color(34, 60, 40);
+        if (estacion == "verano")    return sf::Color(60, 58, 30);
+        if (estacion == "otono")     return sf::Color(66, 44, 28);
+        if (estacion == "invierno")  return sf::Color(36, 46, 66);
+        return sf::Color(30, 30, 35);
+    }
+
+    sf::Color colorComida(int prioridad)
+    {
+        if (prioridad == 1) return sf::Color(255, 215, 0);  // dorada
+        if (prioridad == 2) return sf::Color(90, 200, 90);  // verde
+        return sf::Color(150, 110, 70);                      // marrón
+    }
+}
+
+// CAMBIO: ya no se crea la ventana aquí (ni setFramerateLimit): lo hace Aplicacion.
+MotorGrafico::MotorGrafico(PilaDinamica& _poblacion, sf::Vector2f _tamanoMundo)
+    : tamanoMundo(_tamanoMundo),
+      poblacion(_poblacion),
       tiempoCambioEstacion(10.0f),
       temporizadorEstacion(0.0f),
-      modoActual(ModoSimulacion::Normal)
+      modoActual(ModoSimulacion::Normal),
+      pausado(false),
+      velocidadSim(1.0f),
+      prioridadComida(1),
+      agentesCompetencia(5)
 {
-    ventana.setFramerateLimit(60);
+}
+
+void MotorGrafico::setVelocidad(float v)
+{
+    // Máximo 4x: a 120 px/s el bichito avanza 8 px por frame, menos que el radio de captura (15 px).
+    // Con más velocidad podría "saltarse" la comida sin tocarla.
+    velocidadSim = std::max(0.25f, std::min(v, 4.0f));
+}
+
+void MotorGrafico::setPrioridadComida(int p)
+{
+    if (p >= 1 && p <= 3) prioridadComida = p;
 }
 
 void MotorGrafico::agregarComida(float x, float y, int prioridad, int puntosVida)
@@ -21,19 +80,41 @@ void MotorGrafico::agregarComida(float x, float y, int prioridad, int puntosVida
     colaComida.insertar(c);
 }
 
+void MotorGrafico::agregarBichito()
+{
+    static int idNuevo = 1000;
+    const int rangoX = std::max(1, static_cast<int>(tamanoMundo.x) - 80);
+    const int rangoY = std::max(1, static_cast<int>(tamanoMundo.y) - 80);
+    const float x = 40.0f + static_cast<float>(std::rand() % rangoX);
+    const float y = 40.0f + static_cast<float>(std::rand() % rangoY);
+
+    Bichito b(idNuevo++, 40.0f, x, y);
+    poblacion.generar(b);
+}
+
+void MotorGrafico::quitarBichito()
+{
+    if (poblacion.longitud() > 0)
+        poblacion.borrar();
+}
+
 void MotorGrafico::cargarEscenarioCompetencia(int nAgentes)
 {
+    if (nAgentes < 0) nAgentes = agentesCompetencia; // NUEVO: valor por defecto configurable
+    if (nAgentes < 1) nAgentes = 1;
+
     modoActual = ModoSimulacion::EscenarioCompetencia;
     comidasActivas.clear();
-    
+
     // Limpiar población reiniciando índices (eliminando iterativamente)
     while (poblacion.longitud() > 0) {
         poblacion.morir(0);
     }
 
     // Ubicar 1 unidad de comida en el centro
-    float centroX = ventana.getSize().x / 2.0f;
-    float centroY = ventana.getSize().y / 2.0f;
+    // CAMBIO: antes ventana.getSize(); ahora el tamaño del mundo (sin contar la barra lateral).
+    float centroX = tamanoMundo.x / 2.0f;
+    float centroY = tamanoMundo.y / 2.0f;
     agregarComida(centroX, centroY, 1, 50);
 
     // Generar N agentes alrededor en círculo dirigiéndose al centro
@@ -60,8 +141,9 @@ void MotorGrafico::cargarEscenarioReproduccion()
     }
 
     // Crear dos agentes ubicados a corta distancia el uno del otro
-    float centroX = ventana.getSize().x / 2.0f;
-    float centroY = ventana.getSize().y / 2.0f;
+    // CAMBIO: tamanoMundo en vez de ventana.getSize()
+    float centroX = tamanoMundo.x / 2.0f;
+    float centroY = tamanoMundo.y / 2.0f;
 
     Bichito b1(1, 50.0f, centroX - 80.0f, centroY);
     Bichito b2(2, 50.0f, centroX + 80.0f, centroY);
@@ -74,6 +156,40 @@ void MotorGrafico::cargarEscenarioReproduccion()
 
     poblacion.generar(b1);
     poblacion.generar(b2);
+}
+
+// NUEVO: reemplaza la parte de eventos que estaba dentro de ejecutar().
+// Ya NO maneja el cierre de la ventana (eso lo hace Aplicacion).
+void MotorGrafico::procesarEvento(const sf::Event& evento)
+{
+    // Teclas para cambiar escenarios de prueba
+    if (evento.type == sf::Event::KeyPressed) {
+        if (evento.key.code == sf::Keyboard::Num1) {
+            cargarEscenarioCompetencia();
+        } else if (evento.key.code == sf::Keyboard::Num2) {
+            cargarEscenarioReproduccion();
+        } else if (evento.key.code == sf::Keyboard::R) {
+            modoActual = ModoSimulacion::Normal;
+        }
+    }
+
+    // Click para poner comida manualmente en el mapa.
+    // CAMBIO: solo si el clic cae dentro del mundo (no sobre la barra lateral)
+    // y con la prioridad elegida en la barra.
+    if (evento.type == sf::Event::MouseButtonPressed &&
+        evento.mouseButton.button == sf::Mouse::Left &&
+        static_cast<float>(evento.mouseButton.x) < tamanoMundo.x &&
+        static_cast<float>(evento.mouseButton.y) < tamanoMundo.y) {
+        agregarComida(static_cast<float>(evento.mouseButton.x),
+                      static_cast<float>(evento.mouseButton.y), prioridadComida);
+    }
+}
+
+// NUEVO: avanza la simulación, respetando pausa y velocidad.
+void MotorGrafico::actualizar(float dt)
+{
+    if (pausado) return;
+    actualizarFisica(dt * velocidadSim);
 }
 
 void MotorGrafico::actualizarFisica(float dt)
@@ -99,7 +215,8 @@ void MotorGrafico::actualizarFisica(float dt)
     // 3. Desgaste de vida por la estación actual y muerte
     for (int i = poblacion.longitud() - 1; i >= 0; --i) {
         Bichito& b = poblacion.obtenerRef(i);
-        b.setVida(b.getVida() - (estacionActual.desgasteVida * 0.5f * dt));
+        // CAMBIO: cambiarVida() en lugar de setVida(...) para que la vida llegue a 0 y el bichito muera.
+        cambiarVida(b, -(estacionActual.desgasteVida * 0.5f * dt));
 
         if (b.getCooldownReproduccion() > 0.0f) {
             b.setCooldownReproduccion(b.getCooldownReproduccion() - dt);
@@ -130,7 +247,7 @@ void MotorGrafico::procesarEscenarioCompetencia(float dt)
         // El primer agente en llegar consume la comida y extiende su vida
         if (dist <= radioColisionComida && comidaUnica.isActiva()) {
             comidaUnica.setActiva(false);
-            b.setVida(b.getVida() + comidaUnica.getPuntosDeVida()); // Recibe vida extra
+            cambiarVida(b, static_cast<float>(comidaUnica.getPuntosDeVida())); // CAMBIO: cambiarVida
             std::cout << "¡El Bichito ID " << b.getId() << " ha ganado la comida y aumentado su vida!\n";
         }
     }
@@ -175,11 +292,16 @@ void MotorGrafico::procesarEscenarioReproduccion(float dt)
 
                 std::cout << "¡Nacio un nuevo Bichito (ID: " << nuevoId << ") por reproduccion!\n";
 
+                // OJO: poblacion.generar() puede mover el arreglo en memoria, y b1/b2 serían
+                // referencias inválidas. Las volvemos a pedir antes de seguir usándolas.
+                Bichito& p1 = poblacion.obtenerRef(0);
+                Bichito& p2 = poblacion.obtenerRef(1);
+
                 // Reiniciar contadores
-                b1.setTiempoCercaPareja(0.0f);
-                b2.setTiempoCercaPareja(0.0f);
-                b1.setTarget(b1.getX() - 100.0f, b1.getY());
-                b2.setTarget(b2.getX() + 100.0f, b2.getY());
+                p1.setTiempoCercaPareja(0.0f);
+                p2.setTiempoCercaPareja(0.0f);
+                p1.setTarget(p1.getX() - 100.0f, p1.getY());
+                p2.setTarget(p2.getX() + 100.0f, p2.getY());
             }
         } else {
             b1.setTiempoCercaPareja(0.0f);
@@ -205,16 +327,16 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
                 float dist = std::sqrt(dx * dx + dy * dy);
                 if (dist < minDist) {
                     minDist = dist;
-                    idxCercano = j;
+                    idxCercano = static_cast<int>(j);
                 }
             }
 
             if (idxCercano != -1) {
                 b.setTarget(comidasActivas[idxCercano].getX(), comidasActivas[idxCercano].getY());
-                
+
                 // Comer si está al alcance
                 if (minDist <= 15.0f) {
-                    b.setVida(b.getVida() + comidasActivas[idxCercano].getPuntosDeVida());
+                    cambiarVida(b, static_cast<float>(comidasActivas[idxCercano].getPuntosDeVida())); // CAMBIO
                     comidasActivas[idxCercano].setActiva(false);
                 }
             }
@@ -231,70 +353,46 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
     comidasActivas = temporales;
 }
 
-void MotorGrafico::renderizar()
+// CAMBIO: antes se llamaba renderizar() y dibujaba en su propia ventana (clear + display).
+// Ahora recibe dónde dibujar (destino) y el gestor de texturas. La Aplicacion hace clear/display.
+void MotorGrafico::dibujar(sf::RenderTarget& destino, GestorRecursos& recursos)
 {
-    ventana.clear(sf::Color(30, 30, 35));
+    // 1) Fondo: cambia con la estación. Archivo: assets/textures/fondos/fondo_<estacion>.png
+    const std::string estacion = enMinusculas(estaciones.obtener_actual().nombre);
+    recursos.dibujarFondo(destino, "fondos/fondo_" + estacion, sf::Vector2u(250, 180),
+                          colorFondoEstacion(estacion), sf::Vector2f(0.0f, 0.0f), tamanoMundo);
 
-    // Renderizar Comida (círculos verdes / amarillos)
+    // 2) Comida: antes círculos verdes; ahora un sprite por prioridad (entidades/comida_1, _2, _3).
     for (const auto& c : comidasActivas) {
         if (!c.isActiva()) continue;
-        sf::CircleShape formaComida(6.0f);
-        formaComida.setFillColor(sf::Color::Green);
-        formaComida.setOrigin(6.0f, 6.0f);
-        formaComida.setPosition(c.getX(), c.getY());
-        ventana.draw(formaComida);
+
+        const sf::Texture& tex = recursos.textura("entidades/comida_" + std::to_string(c.getPrioridad()),
+                                                  sf::Vector2u(8, 8), colorComida(c.getPrioridad()),
+                                                  Forma::Circulo);
+        sf::Sprite sprite(tex);
+        sprite.setOrigin(tex.getSize().x / 2.0f, tex.getSize().y / 2.0f); // origen al centro
+        sprite.setScale(Config::ESCALA_COMIDA, Config::ESCALA_COMIDA);
+        sprite.setPosition(std::round(c.getX()), std::round(c.getY()));
+        destino.draw(sprite);
     }
 
-    // Renderizar Bichitos (círculos azules / cian proporcional a su vida)
+    // 3) Bichitos: antes círculos azules; ahora el sprite entidades/bichito.
     for (int i = 0; i < poblacion.longitud(); ++i) {
-        Bichito b = poblacion.obtener(i);
-        float radio = 10.0f + (b.getVida() / 10.0f);
-        sf::CircleShape formaBichito(radio);
-        formaBichito.setFillColor(sf::Color(50, 180, 255));
-        formaBichito.setOutlineThickness(2.0f);
-        formaBichito.setOutlineColor(sf::Color::White);
-        formaBichito.setOrigin(radio, radio);
-        formaBichito.setPosition(b.getX(), b.getY());
-        ventana.draw(formaBichito);
-    }
+        const Bichito& b = poblacion.obtenerRef(i);
 
-    ventana.display();
-}
+        const sf::Texture& tex = recursos.textura("entidades/bichito", sf::Vector2u(16, 16),
+                                                  sf::Color(50, 180, 255), Forma::Circulo);
+        sf::Sprite sprite(tex);
+        sprite.setOrigin(tex.getSize().x / 2.0f, tex.getSize().y / 2.0f);
 
-void MotorGrafico::ejecutar()
-{
-    sf::Clock reloj;
+        // Igual que antes: mientras más vida, más grande (radio = 10 + vida/10).
+        const float diametro = 2.0f * (10.0f + b.getVida() / 10.0f);
+        float escala = diametro / static_cast<float>(tex.getSize().x);
+        if (Config::BICHITO_ESCALA_ENTERA)
+            escala = std::max(1.0f, std::round(escala));
+        sprite.setScale(escala, escala);
 
-    while (ventana.isOpen()) {
-        sf::Time lapso = reloj.restart();
-        float dt = lapso.asSeconds();
-
-        sf::Event evento;
-        while (ventana.pollEvent(evento)) {
-            if (evento.type == sf::Event::Closed) {
-                ventana.close();
-            }
-
-            // Teclas para cambiar escenarios de prueba
-            if (evento.type == sf::Event::KeyPressed) {
-                if (evento.key.code == sf::Keyboard::Num1) {
-                    cargarEscenarioCompetencia(5); // 5 bichitos compitiendo por 1 comida
-                } else if (evento.key.code == sf::Keyboard::Num2) {
-                    cargarEscenarioReproduccion(); // Escenario de reproducción por proximidad
-                } else if (evento.key.code == sf::Keyboard::R) {
-                    modoActual = ModoSimulacion::Normal;
-                }
-            }
-
-            // Click para poner comida manualmente en el mapa
-            if (evento.type == sf::Event::MouseButtonPressed) {
-                if (evento.mouseButton.button == sf::Mouse::Left) {
-                    agregarComida(evento.mouseButton.x, evento.mouseButton.y);
-                }
-            }
-        }
-
-        actualizarFisica(dt);
-        renderizar();
+        sprite.setPosition(std::round(b.getX()), std::round(b.getY()));
+        destino.draw(sprite);
     }
 }

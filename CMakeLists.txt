@@ -28,11 +28,27 @@ FetchContent_MakeAvailable(SFML)
 # Incluir las cabeceras del proyecto
 include_directories(include)
 
+# CAMBIO: en vez de listar cada .cpp a mano, se toman todos los de src/ (incluida src/gui/).
+# CONFIGURE_DEPENDS hace que CMake detecte archivos nuevos al volver a compilar.
+file(GLOB_RECURSE FUENTES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/src/*.cpp)
+
 # Definición del ejecutable
-add_executable(ElJuegoDeLaVida
-    src/main.cpp
-    src/MotorGrafico.cpp
-)
+add_executable(ElJuegoDeLaVida ${FUENTES})
+
+# Con Visual Studio (MSVC) hay que indicar que el código fuente está en UTF-8 (tildes y ñ en los textos).
+if(MSVC)
+    target_compile_options(ElJuegoDeLaVida PRIVATE /utf-8)
+endif()
 
 # Enlace de librerías SFML
 target_link_libraries(ElJuegoDeLaVida PRIVATE sfml-graphics sfml-window sfml-system)
+
+# NUEVO: copiar la carpeta assets/ (fuente y texturas) junto al ejecutable en cada compilación.
+file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/assets)
+add_custom_command(
+    TARGET ElJuegoDeLaVida POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/assets
+            $<TARGET_FILE_DIR:ElJuegoDeLaVida>/assets
+    COMMENT "Copiando carpeta assets junto al ejecutable..."
+)
