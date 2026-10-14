@@ -26,9 +26,9 @@ namespace Config
     inline constexpr float ESCALA_PIXEL = 4.0f;
     // La comida es pequeña: una imagen de 8x8 se verá de 16x16.
     inline constexpr float ESCALA_COMIDA = 2.0f;
-    // false: el bichito crece de forma continua según su vida (como el motor original).
-    // true : la escala se redondea a números enteros (1x, 2x, 3x) para que el pixel art no se deforme.
-    inline constexpr bool BICHITO_ESCALA_ENTERA = false;
+    // false: El bichito no crece.
+    // true : El bichito crece según su vida.
+    inline constexpr bool BICHITO_CRECE = false;
 
     // ---------- Rutas (relativas a la carpeta del .exe) ----------
     inline const std::string RUTA_FUENTE = "assets/fonts/Monocraft.ttf";

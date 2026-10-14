@@ -385,11 +385,13 @@ void MotorGrafico::dibujar(sf::RenderTarget& destino, GestorRecursos& recursos)
         sf::Sprite sprite(tex);
         sprite.setOrigin(tex.getSize().x / 2.0f, tex.getSize().y / 2.0f);
 
-        // Igual que antes: mientras más vida, más grande (radio = 10 + vida/10).
-        const float diametro = 2.0f * (10.0f + b.getVida() / 10.0f);
+        
+        float diametro = 20.0f; // Tamaño base del bichito
+
+        if (Config::BICHITO_CRECE)
+            diametro = 2.0f * (10.0f + b.getVida() / 10.0f); // Mientras más vida, más grande (radio = 10 + vida/10).
+
         float escala = diametro / static_cast<float>(tex.getSize().x);
-        if (Config::BICHITO_ESCALA_ENTERA)
-            escala = std::max(1.0f, std::round(escala));
         sprite.setScale(escala, escala);
 
         sprite.setPosition(std::round(b.getX()), std::round(b.getY()));
