@@ -315,7 +315,6 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
     for (int i = 0; i < poblacion.longitud(); ++i) {
         Bichito& b = poblacion.obtenerRef(i);
 
-        // Si no tiene objetivo cercano o llegó a él, buscar comida más cercana
         if (!comidasActivas.empty()) {
             int idxCercano = -1;
             float minDist = 999999.0f;
@@ -340,9 +339,8 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
                     comidasActivas[idxCercano].setActiva(false);
                 }
             }
+            b.moverHaciaObjetivo(dt);
         }
-
-        b.moverHaciaObjetivo(dt);
     }
 
     // Limpiar comidas consumidas
