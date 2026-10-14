@@ -13,14 +13,6 @@ namespace
     // NUEVO (corrige un error): Bichito::setVida RECHAZA valores fuera de 0..200 y no hace nada.
     // Antes, cuando la vida iba a quedar negativa, la resta se ignoraba y el bichito nunca moría.
     // Esta función limita el resultado al rango válido antes de llamar a setVida.
-    void cambiarVida(Bichito& b, float delta)
-    {
-        float nueva = b.getVida() + delta;
-        if (nueva < 0.0f) nueva = 0.0f;
-        if (nueva > 200.0f) nueva = 200.0f;
-        b.setVida(nueva);
-    }
-
     std::string enMinusculas(std::string s)
     {
         std::transform(s.begin(), s.end(), s.begin(),
@@ -216,7 +208,7 @@ void MotorGrafico::actualizarFisica(float dt)
     for (int i = poblacion.longitud() - 1; i >= 0; --i) {
         Bichito& b = poblacion.obtenerRef(i);
         // CAMBIO: cambiarVida() en lugar de setVida(...) para que la vida llegue a 0 y el bichito muera.
-        cambiarVida(b, -(estacionActual.desgasteVida * 0.5f * dt));
+        b.cambiarVida(-(estacionActual.desgasteVida * 0.5f * dt));
 
         if (b.getCooldownReproduccion() > 0.0f) {
             b.setCooldownReproduccion(b.getCooldownReproduccion() - dt);
@@ -247,7 +239,7 @@ void MotorGrafico::procesarEscenarioCompetencia(float dt)
         // El primer agente en llegar consume la comida y extiende su vida
         if (dist <= radioColisionComida && comidaUnica.isActiva()) {
             comidaUnica.setActiva(false);
-            cambiarVida(b, static_cast<float>(comidaUnica.getPuntosDeVida())); // CAMBIO: cambiarVida
+            b.cambiarVida(static_cast<float>(comidaUnica.getPuntosDeVida())); // CAMBIO: cambiarVida
             std::cout << "¡El Bichito ID " << b.getId() << " ha ganado la comida y aumentado su vida!\n";
         }
     }
@@ -313,37 +305,9 @@ void MotorGrafico::procesarEscenarioReproduccion(float dt)
 void MotorGrafico::procesarSimulacionGeneral(float dt)
 {
     for (int i = 0; i < poblacion.longitud(); ++i) {
-        Bichito& b = poblacion.obtenerRef(i);
-
-        if (!comidasActivas.empty()) {
-            int idxCercano = -1;
-            float minDist = 999999.0f;
-
-            for (size_t j = 0; j < comidasActivas.size(); ++j) {
-                if (!comidasActivas[j].isActiva()) continue;
-                float dx = comidasActivas[j].getX() - b.getX();
-                float dy = comidasActivas[j].getY() - b.getY();
-                float dist = std::sqrt(dx * dx + dy * dy);
-                if (dist < minDist) {
-                    minDist = dist;
-                    idxCercano = static_cast<int>(j);
-                }
-            }
-
-            if (idxCercano != -1) {
-                b.setTarget(comidasActivas[idxCercano].getX(), comidasActivas[idxCercano].getY());
-
-                // Comer si está al alcance
-                if (minDist <= 15.0f) {
-                    cambiarVida(b, static_cast<float>(comidasActivas[idxCercano].getPuntosDeVida())); // CAMBIO
-                    comidasActivas[idxCercano].setActiva(false);
-                }
-            }
-            b.moverHaciaObjetivo(dt);
-        }
+        poblacion.obtenerRef(i).actualizar(dt, comidasActivas, poblacion);
     }
-
-    // Limpiar comidas consumidas
+    
     std::vector<Comida> temporales;
     for (const auto& c : comidasActivas) {
         if (c.isActiva()) temporales.push_back(c);
