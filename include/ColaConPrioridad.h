@@ -124,6 +124,36 @@ public:
     }
 
     /*
+     * @brief Extrae comida omitiendo la Prioridad 1 (Alta) para simular escasez.
+     * @details Diseñado para las estaciones de Otoño e Invierno. Asigna un 80% de 
+     *          probabilidad de salida a la Prioridad 3 y un 20% a la Prioridad 2. 
+     *          Si la cola seleccionada está vacía, busca en la otra cola disponible.
+     * @return Comida El objeto extraído de Prioridad 2 o 3, o Comida(-1, -1, -1) si no hay disponibilidad.
+     */
+    Comida extraer_sin_prioridad_alta()
+    {
+        if (colas[1].esvacia() && colas[2].esvacia())
+        {
+            return Comida(-1, -1, -1);
+        }
+
+        int dado = (std::rand() % 100) + 1;
+
+        if (dado <= 80)
+        {
+            if (!colas[2].esvacia()) return colas[2].eliminar_primero();
+            if (!colas[1].esvacia()) return colas[1].eliminar_primero();
+        }
+        else
+        {
+            if (!colas[1].esvacia()) return colas[1].eliminar_primero();
+            if (!colas[2].esvacia()) return colas[2].eliminar_primero();
+        }
+
+        return Comida(-1, -1, -1);
+    }
+
+    /*
      * @brief Verifica si no existe comida de ningún nivel en el sistema.
      * @return true si las 3 colas están vacías, false de lo contrario.
      */

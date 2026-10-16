@@ -12,7 +12,8 @@
 *.pem
 
 # Configuraciones del IDE
-.vscode/
+.vscode/*
+!.vscode/c_cpp_properties.json
 .idea/
 *.user
 

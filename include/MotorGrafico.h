@@ -37,6 +37,7 @@ private:
     void procesarEscenarioCompetencia(float dt);
     void procesarEscenarioReproduccion(float dt);
     void procesarSimulacionGeneral(float dt);
+    Comida extraerComidaSegunEstacion();
 
 public:
     // CAMBIO: recibe el tamaño del mundo en vez de crear la ventana.

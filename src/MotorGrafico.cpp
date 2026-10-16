@@ -67,9 +67,17 @@ void MotorGrafico::setPrioridadComida(int p)
 void MotorGrafico::agregarComida(float x, float y, int prioridad, int puntosVida)
 {
     static int idComida = 1;
+
+    // Validación ambiental: En Otoño/Invierno no se permite comida de Prioridad 1 (Alta)
+    Estacion estacionActual = estaciones.obtener_actual();[cite: 3, 6]
+    if ((estacionActual.nombre == "Otono" || estacionActual.nombre == "Invierno") && prioridad == 1)
+    {
+        prioridad = 2; // Se fuerza a Prioridad Media por escasez
+    }
+
     Comida c(idComida++, prioridad, puntosVida, x, y);
     comidasActivas.push_back(c);
-    colaComida.insertar(c);
+    colaComida.insertar(c);[cite: 3, 5]
 }
 
 void MotorGrafico::agregarBichito()
@@ -304,6 +312,16 @@ void MotorGrafico::procesarEscenarioReproduccion(float dt)
 
 void MotorGrafico::procesarSimulacionGeneral(float dt)
 {
+    // Extraer comida de la cola según las reglas de la estación actual
+    if (!colaComida.esvacia())[cite: 3, 5]
+    {
+        Comida c = extraerComidaSegunEstacion();[cite: 3, 5]
+        if (c.getId() != -1)[cite: 4, 5]
+        {
+            comidasActivas.push_back(c);[cite: 3]
+        }
+    }
+
     for (int i = 0; i < poblacion.longitud(); ++i) {
         poblacion.obtenerRef(i).actualizar(dt, comidasActivas, poblacion);
     }
@@ -359,4 +377,25 @@ void MotorGrafico::dibujar(sf::RenderTarget& destino, GestorRecursos& recursos)
         sprite.setPosition(std::round(b.getX()), std::round(b.getY()));
         destino.draw(sprite);
     }
+    /*
+ * @brief Extrae una comida de la cola procesando la restricción de estación activa.
+ * @details Si la estación actual en la ColaCircular es Primavera o Verano, extrae
+ *          usando 'extraer_segun_probabilidad()' (distribución entre las 3 prioridades).
+ *          Si es Otoño e Invierno, utiliza 'extraer_sin_prioridad_alta()' para simular
+ *          escasez omitiendo la comida de Prioridad 1.
+ * @return Comida Objeto extraído de la cola correspondiente, o Comida(-1, -1, -1) si no hay disponibilidad.
+ */
+Comida MotorGrafico::extraerComidaSegunEstacion()
+{
+    Estacion estacionActual = estaciones.obtener_actual();[cite: 3, 6]
+
+    if (estacionActual.nombre == "Primavera" || estacionActual.nombre == "Verano")
+    {
+        return colaComida.extraer_segun_probabilidad();[cite: 3, 5]
+    }
+    else
+    {
+        return colaComida.extraer_sin_prioridad_alta();[cite: 3, 5]
+    }
+}
 }
