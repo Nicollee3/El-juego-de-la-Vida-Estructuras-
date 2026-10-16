@@ -13,7 +13,7 @@
 #define PILA_DINAMICA_H
 
 #include <iostream>
-#include "Bichito.h"
+#include "BICHITO.H"
 
 class PilaDinamica
 {
