@@ -69,7 +69,7 @@ void MotorGrafico::agregarComida(float x, float y, int prioridad, int puntosVida
     static int idComida = 1;
 
     // Validación ambiental: En Otoño/Invierno no se permite comida de Prioridad 1 (Alta)
-    Estacion estacionActual = estaciones.obtener_actual();[cite: 3, 6]
+    Estacion estacionActual = estaciones.obtener_actual();
     if ((estacionActual.nombre == "Otono" || estacionActual.nombre == "Invierno") && prioridad == 1)
     {
         prioridad = 2; // Se fuerza a Prioridad Media por escasez
@@ -77,7 +77,7 @@ void MotorGrafico::agregarComida(float x, float y, int prioridad, int puntosVida
 
     Comida c(idComida++, prioridad, puntosVida, x, y);
     comidasActivas.push_back(c);
-    colaComida.insertar(c);[cite: 3, 5]
+    colaComida.insertar(c);
 }
 
 void MotorGrafico::agregarBichito()
@@ -313,12 +313,12 @@ void MotorGrafico::procesarEscenarioReproduccion(float dt)
 void MotorGrafico::procesarSimulacionGeneral(float dt)
 {
     // Extraer comida de la cola según las reglas de la estación actual
-    if (!colaComida.esvacia())[cite: 3, 5]
+    if (!colaComida.esvacia())
     {
-        Comida c = extraerComidaSegunEstacion();[cite: 3, 5]
-        if (c.getId() != -1)[cite: 4, 5]
+        Comida c = extraerComidaSegunEstacion();
+        if (c.getId() != -1)
         {
-            comidasActivas.push_back(c);[cite: 3]
+            comidasActivas.push_back(c);
         }
     }
 
@@ -385,17 +385,17 @@ void MotorGrafico::dibujar(sf::RenderTarget& destino, GestorRecursos& recursos)
  *          escasez omitiendo la comida de Prioridad 1.
  * @return Comida Objeto extraído de la cola correspondiente, o Comida(-1, -1, -1) si no hay disponibilidad.
  */
-Comida MotorGrafico::extraerComidaSegunEstacion()
-{
-    Estacion estacionActual = estaciones.obtener_actual();[cite: 3, 6]
+}
+
+Comida MotorGrafico::extraerComidaSegunEstacion(){
+        Estacion estacionActual = estaciones.obtener_actual();
 
     if (estacionActual.nombre == "Primavera" || estacionActual.nombre == "Verano")
     {
-        return colaComida.extraer_segun_probabilidad();[cite: 3, 5]
+        return colaComida.extraer_segun_probabilidad();
     }
     else
     {
-        return colaComida.extraer_sin_prioridad_alta();[cite: 3, 5]
+        return colaComida.extraer_sin_prioridad_alta();
     }
-}
 }
