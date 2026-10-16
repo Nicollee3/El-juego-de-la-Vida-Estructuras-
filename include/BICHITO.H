@@ -10,6 +10,9 @@
 #define BICHITO_H
 
 #include <cmath>
+#include <Comida.h>
+
+class PilaDinamica;
 
 enum class EstadoBichito { BuscandoComida, BuscandoPareja, DePaseo };
 
@@ -28,18 +31,19 @@ private:
     int idParejaObjetivo;
     float cooldownReproduccion;
 
+    // Declaración de métodos privados (sus cuerpos se mueven al .cpp)
+    void evaluarEstado();
+    void buscarComida(std::vector<Comida>& comidas);
+    void buscarPareja(PilaDinamica& poblacion, float dt);
+    void reproducirseCon(Bichito& pareja, PilaDinamica& poblacion);
+    void pasear();
+
 public:
-    Bichito() 
-        : id(0), vida(30.0f), x(0.0f), y(0.0f), targetX(0.0f), targetY(0.0f),
-          velocidad(120.0f), estado(EstadoBichito::BuscandoComida),
-          tiempoCercaPareja(0.0f), idParejaObjetivo(-1), cooldownReproduccion(0.0f) {}
+    // Constructores
+    Bichito();
+    Bichito(int _id, float _vida, float _x = 0.0f, float _y = 0.0f);
 
-    Bichito(int _id, float _vida, float _x = 0.0f, float _y = 0.0f) 
-        : id(_id), vida(_vida), x(_x), y(_y), targetX(_x), targetY(_y),
-          velocidad(120.0f), estado(EstadoBichito::BuscandoComida),
-          tiempoCercaPareja(0.0f), idParejaObjetivo(-1), cooldownReproduccion(0.0f) {}
-
-    // Getters
+    // Getters simples (pueden quedarse en el .h por ser de 1 línea)
     int getId() const { return id; }
     float getVida() const { return vida; }
     float getX() const { return x; }
@@ -52,15 +56,9 @@ public:
     int getIdParejaObjetivo() const { return idParejaObjetivo; }
     float getCooldownReproduccion() const { return cooldownReproduccion; }
 
-    // Setters
+    // Setters simples
     void setId(int _id) { id = _id; }
-    bool setVida(float _vida) {
-        if (_vida >= 0.0f && _vida <= 200.0f) {
-            vida = _vida;
-            return true;
-        }
-        return false;
-    }
+    bool setVida(float _vida);
     void setPosicion(float _x, float _y) { x = _x; y = _y; }
     void setTarget(float _tx, float _ty) { targetX = _tx; targetY = _ty; }
     void setVelocidad(float _v) { velocidad = _v; }
@@ -69,19 +67,10 @@ public:
     void setIdParejaObjetivo(int _idP) { idParejaObjetivo = _idP; }
     void setCooldownReproduccion(float _cd) { cooldownReproduccion = _cd; }
 
-    // Movimiento continuo en línea recta hacia el objetivo
-    void moverHaciaObjetivo(float dt) {
-        float dx = targetX - x;
-        float dy = targetY - y;
-        float dist = std::sqrt(dx * dx + dy * dy);
-
-        if (dist > 2.0f) {
-            float dirX = dx / dist;
-            float dirY = dy / dist;
-            x += dirX * velocidad * dt;
-            y += dirY * velocidad * dt;
-        }
-    }
+    // Declaración de métodos con lógica pesada (sus cuerpos se mueven al .cpp)
+    void moverHaciaObjetivo(float dt);
+    void actualizar(float dt, std::vector<Comida>& comidas, PilaDinamica& poblacion);
+    void cambiarVida(float delta);
 };
 
 #endif
