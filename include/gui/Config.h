@@ -28,7 +28,7 @@ namespace Config
     inline constexpr float ESCALA_COMIDA = 2.0f;
     // false: El bichito no crece.
     // true : El bichito crece según su vida.
-    inline constexpr bool BICHITO_CRECE = false;
+    inline constexpr bool BICHITO_CRECE = true;
 
     // ---------- Rutas (relativas a la carpeta del .exe) ----------
     inline const std::string RUTA_FUENTE = "assets/fonts/Monocraft.ttf";

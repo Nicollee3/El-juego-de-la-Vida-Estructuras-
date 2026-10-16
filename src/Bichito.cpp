@@ -4,6 +4,7 @@
 #include <vector>
 #include "Bichito.h"
 #include "PilaDinamica.h" 
+#include "gui/Config.h"
 
 // --- CONSTRUCTORES ---
 Bichito::Bichito() 
@@ -34,13 +35,24 @@ void Bichito::cambiarVida(float delta) {
 
 // --- MÉTODOS PRIVADOS ---
 void Bichito::evaluarEstado() {
+    EstadoBichito nuevoEstado;
+
     if (vida < 50.0f) {
+        setVelocidad(120.0f);
         estado = EstadoBichito::BuscandoComida;
     } else if (vida > 70.0f) {
+        setVelocidad(120.0f);
         estado = EstadoBichito::BuscandoPareja;
     } else {
+        setVelocidad(60.0f);
         estado = EstadoBichito::DePaseo;
     }
+    // Si el bichito cambia a estar de paseo baja su velocidad
+    //if (nuevoEstado != estado) {
+    //    estado = nuevoEstado;
+    //    float nVelocidad = (estado == EstadoBichito::DePaseo) ? 60.0f : 120.0f;
+    //    setVelocidad(nVelocidad);
+    //}
 }
 
 void Bichito::buscarComida(std::vector<Comida>& comidas) {
@@ -139,6 +151,21 @@ void Bichito::reproducirseCon(Bichito& pareja, PilaDinamica& poblacion) {
 
 void Bichito::pasear() {
     
+    float dx = targetX - x;
+    float dy = targetY - y;
+    float dist = std::sqrt(dx * dx + dy * dy);
+
+    float margen = 30.0f;
+
+    if (dist <= 10.0f) {
+        float minX = margen;
+        float maxX = Config::ANCHO_MUNDO - margen;
+        float minY = margen;
+        float maxY = Config::ALTO_MUNDO - margen;
+
+        targetX = minX + (float)rand() / RAND_MAX*(Config::ANCHO_MUNDO);
+        targetY = minY + (float)rand() / RAND_MAX*(Config::ALTO_MUNDO); 
+    }
 }
 
 // --- MÉTODOS PÚBLICOS DE MOVIMIENTO Y ACTUALIZACIÓN ---
