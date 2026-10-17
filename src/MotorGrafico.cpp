@@ -44,6 +44,8 @@ MotorGrafico::MotorGrafico(PilaDinamica& _poblacion, sf::Vector2f _tamanoMundo)
     poblacion(_poblacion),
     tiempoCambioEstacion(10.0f),
     temporizadorEstacion(0.0f),
+    temporizadorComida(0.0f),
+    intervaloComida(2.0f),
     modoActual(ModoSimulacion::Normal),
     pausado(false),
     velocidadSim(1.0f),
@@ -312,15 +314,18 @@ void MotorGrafico::procesarEscenarioReproduccion(float dt)
 
 void MotorGrafico::procesarSimulacionGeneral(float dt)
 {
-    // Extraer comida de la cola según las reglas de la estación actual
-    if (!colaComida.esvacia())[cite: 3, 5]
+    // 1. Sumar el tiempo transcurrido en cada fotograma
+    temporizadorComida += dt;
+
+    // 2. Extraer comida solo cuando se cumpla el intervalo definido
+    if (temporizadorComida >= intervaloComida && !colaComida.esvacia())
     {
         Comida c = extraerComidaSegunEstacion();
         if (c.getId() != -1)
         {
             comidasActivas.push_back(c);
         }
-        temporizadorComida = 0.0f; // Reiniciar temporizador
+        temporizadorComida = 0.0f; // Reiniciar el acumulador
     }
 
     // Actualización de bichitos en la población
@@ -392,7 +397,7 @@ void MotorGrafico::dibujar(sf::RenderTarget& destino, GestorRecursos& recursos)
  */
 Comida MotorGrafico::extraerComidaSegunEstacion()
 {
-    Estacion estacionActual = estaciones.obtener_actual();[cite: 3, 6]
+    Estacion estacionActual = estaciones.obtener_actual();
 
     if (estacionActual.nombre == "Primavera" || estacionActual.nombre == "Verano")
     {
@@ -400,7 +405,7 @@ Comida MotorGrafico::extraerComidaSegunEstacion()
     }
     else
     {
-        return colaComida.extraer_sin_prioridad_alta();[cite: 3, 5]
+        return colaComida.extraer_sin_prioridad_alta();
     }
 }
-}
+

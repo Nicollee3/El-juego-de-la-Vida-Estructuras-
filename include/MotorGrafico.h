@@ -7,7 +7,7 @@
 #include "ColaConPrioridad.h"
 #include "ColaCircular.h"
 
-class GestorRecursos; // declaración adelantada: solo se necesita el nombre en este .h
+class GestorRecursos; // declaración adelantada
 
 enum class ModoSimulacion { Normal, EscenarioCompetencia, EscenarioReproduccion };
 
@@ -25,6 +25,9 @@ private:
     float tiempoCambioEstacion;
     float temporizadorEstacion;
     ModoSimulacion modoActual;
+
+    float temporizadorComida;
+    float intervaloComida;
 
     // NUEVO: estado que controla la barra lateral
     bool pausado;
