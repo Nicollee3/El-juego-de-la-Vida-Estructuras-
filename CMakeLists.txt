@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
 
-# Silenciar advertencias de depreciación de dependencias externas
 set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
 
 project(ElJuegoDeLaVida VERSION 1.0 LANGUAGES CXX)
@@ -8,42 +7,45 @@ project(ElJuegoDeLaVida VERSION 1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Forzar SFML a compilar de forma estatica
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-# Desactivar módulos no utilizados para evitar conflictos con MinGW moderno
-set(SFML_BUILD_AUDIO OFF CACHE BOOL "" FORCE)
-set(SFML_BUILD_NETWORK OFF CACHE BOOL "" FORCE)
-set(SFML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(SFML_BUILD_DOC OFF CACHE BOOL "" FORCE)
+# Buscar librerías en MSYS2 UCRT64 si existe
+if(EXISTS "C:/msys64/ucrt64")
+    list(APPEND CMAKE_PREFIX_PATH "C:/msys64/ucrt64")
+endif()
 
-# Descarga e integración automática de SFML 2.6.1
-include(FetchContent)
-FetchContent_Declare(
-    SFML
-    GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_TAG        2.6.1
-)
-FetchContent_MakeAvailable(SFML)
+# 1. Intentar usar SFML instalado en el sistema (PC de tu compañera)
+find_package(SFML 2.5 COMPONENTS graphics window system QUIET)
 
-# Incluir las cabeceras del proyecto
+# 2. Si no existe en el sistema, descargarlo (Tu PC)
+if(NOT SFML_FOUND)
+    message(STATUS "SFML no encontrado. Descargando vía FetchContent...")
+    
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(SFML_BUILD_AUDIO OFF CACHE BOOL "" FORCE)
+    set(SFML_BUILD_NETWORK OFF CACHE BOOL "" FORCE)
+    set(SFML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(SFML_BUILD_DOC OFF CACHE BOOL "" FORCE)
+
+    include(FetchContent)
+    FetchContent_Declare(
+        SFML
+        GIT_REPOSITORY https://github.com/SFML/SFML.git
+        GIT_TAG        2.6.1
+    )
+    FetchContent_MakeAvailable(SFML)
+endif()
+
 include_directories(include)
 
-# CAMBIO: en vez de listar cada .cpp a mano, se toman todos los de src/ (incluida src/gui/).
-# CONFIGURE_DEPENDS hace que CMake detecte archivos nuevos al volver a compilar.
 file(GLOB_RECURSE FUENTES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/src/*.cpp)
 
-# Definición del ejecutable
 add_executable(ElJuegoDeLaVida ${FUENTES})
 
-# Con Visual Studio (MSVC) hay que indicar que el código fuente está en UTF-8 (tildes y ñ en los textos).
 if(MSVC)
     target_compile_options(ElJuegoDeLaVida PRIVATE /utf-8)
 endif()
 
-# Enlace de librerías SFML
 target_link_libraries(ElJuegoDeLaVida PRIVATE sfml-graphics sfml-window sfml-system)
 
-# NUEVO: copiar la carpeta assets/ (fuente y texturas) junto al ejecutable en cada compilación.
 file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/assets)
 add_custom_command(
     TARGET ElJuegoDeLaVida POST_BUILD

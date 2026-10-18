@@ -47,7 +47,7 @@ private:
 
 public:
     /*
-     * @brief Construye una nueva Cola vacía.
+     * @brief Construye una nueva cola vacía.
      * @details Inicializa los punteros cabeza y ultimo.
      */
     Cola()
