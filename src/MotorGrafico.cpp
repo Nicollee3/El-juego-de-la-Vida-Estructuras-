@@ -217,14 +217,23 @@ void MotorGrafico::actualizarFisica(float dt)
     // 3. Desgaste de vida por la estación actual y muerte
     for (int i = poblacion.longitud() - 1; i >= 0; --i) {
         Bichito& b = poblacion.obtenerRef(i);
-        // CAMBIO: cambiarVida() en lugar de setVida(...) para que la vida llegue a 0 y el bichito muera.
         b.cambiarVida(-(estacionActual.desgasteVida * 0.5f * dt));
-
+        
         if (b.getCooldownReproduccion() > 0.0f) {
             b.setCooldownReproduccion(b.getCooldownReproduccion() - dt);
         }
-
+    
+        // Comprobar si el bichito ha muerto
         if (b.getVida() <= 0.0f) {
+            // 1. Guardamos la posición exacta antes de eliminarlo
+            float xMuerte = b.getX();
+            float yMuerte = b.getY();
+        
+            // 2. Generamos una nueva comida de Prioridad 2 en esa ubicación
+            //    (puedes ajustar los puntos de vida que da esa comida, por defecto 30 o el que tenga configurado)
+            agregarComida(xMuerte, yMuerte, 2, 30);
+        
+            // 3. Eliminamos el bichito de la población
             poblacion.morir(i);
         }
     }

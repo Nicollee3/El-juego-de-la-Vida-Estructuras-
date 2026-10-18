@@ -31,7 +31,7 @@ private:
     int idParejaObjetivo;
     float cooldownReproduccion;
 
-    // Declaración de métodos privados (sus cuerpos se mueven al .cpp)
+    // Declaración de métodos privados
     void evaluarEstado();
     void buscarComida(std::vector<Comida>& comidas);
     void buscarPareja(PilaDinamica& poblacion, float dt);
