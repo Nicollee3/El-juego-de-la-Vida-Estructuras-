@@ -35,9 +35,7 @@ private:
     int idParejaObjetivo;
     float cooldownReproduccion;
 
-    /*
-     * @brief Evalúa el entorno y determina si el bichito debe cambiar su estado actual.
-     */
+    // Declaración de métodos privados (sus cuerpos se mueven al .cpp)
     void evaluarEstado();
     /*
      * @brief Busca la comida más cercana dentro del vector de elementos disponibles.

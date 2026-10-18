@@ -26,7 +26,7 @@ public:
 private:
     void crearPantalla(EstadoApp estado);
 
-    // OJO con el orden: se destruyen al revés. La pantalla debe morir antes que los recursos,
+    //La pantalla debe morir antes que los recursos,
     // y los recursos (texturas) antes que la ventana.
     sf::RenderWindow ventana_;
     GestorRecursos recursos_;

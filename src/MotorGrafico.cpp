@@ -16,7 +16,7 @@ namespace
     std::string enMinusculas(std::string s)
     {
         std::transform(s.begin(), s.end(), s.begin(),
-                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
         return s;
     }
 
@@ -41,14 +41,16 @@ namespace
 // CAMBIO: ya no se crea la ventana aquí (ni setFramerateLimit): lo hace Aplicacion.
 MotorGrafico::MotorGrafico(PilaDinamica& _poblacion, sf::Vector2f _tamanoMundo)
     : tamanoMundo(_tamanoMundo),
-      poblacion(_poblacion),
-      tiempoCambioEstacion(10.0f),
-      temporizadorEstacion(0.0f),
-      modoActual(ModoSimulacion::Normal),
-      pausado(false),
-      velocidadSim(1.0f),
-      prioridadComida(1),
-      agentesCompetencia(5)
+    poblacion(_poblacion),
+    tiempoCambioEstacion(10.0f),
+    temporizadorEstacion(0.0f),
+    temporizadorComida(0.0f),
+    intervaloComida(2.0f),
+    modoActual(ModoSimulacion::Normal),
+    pausado(false),
+    velocidadSim(1.0f),
+    prioridadComida(1),
+    agentesCompetencia(5)
 {
 }
 
@@ -67,6 +69,14 @@ void MotorGrafico::setPrioridadComida(int p)
 void MotorGrafico::agregarComida(float x, float y, int prioridad, int puntosVida)
 {
     static int idComida = 1;
+
+    // Validación ambiental: En Otoño/Invierno no se permite comida de Prioridad 1 (Alta)
+    Estacion estacionActual = estaciones.obtener_actual();
+    if ((estacionActual.nombre == "Otono" || estacionActual.nombre == "Invierno") && prioridad == 1)
+    {
+        prioridad = 2; // Se fuerza a Prioridad Media por escasez
+    }
+
     Comida c(idComida++, prioridad, puntosVida, x, y);
     comidasActivas.push_back(c);
     colaComida.insertar(c);
@@ -173,7 +183,7 @@ void MotorGrafico::procesarEvento(const sf::Event& evento)
         static_cast<float>(evento.mouseButton.x) < tamanoMundo.x &&
         static_cast<float>(evento.mouseButton.y) < tamanoMundo.y) {
         agregarComida(static_cast<float>(evento.mouseButton.x),
-                      static_cast<float>(evento.mouseButton.y), prioridadComida);
+        static_cast<float>(evento.mouseButton.y), prioridadComida);
     }
 }
 
@@ -207,14 +217,23 @@ void MotorGrafico::actualizarFisica(float dt)
     // 3. Desgaste de vida por la estación actual y muerte
     for (int i = poblacion.longitud() - 1; i >= 0; --i) {
         Bichito& b = poblacion.obtenerRef(i);
-        // CAMBIO: cambiarVida() en lugar de setVida(...) para que la vida llegue a 0 y el bichito muera.
         b.cambiarVida(-(estacionActual.desgasteVida * 0.5f * dt));
-
+        
         if (b.getCooldownReproduccion() > 0.0f) {
             b.setCooldownReproduccion(b.getCooldownReproduccion() - dt);
         }
-
+    
+        // Comprobar si el bichito ha muerto
         if (b.getVida() <= 0.0f) {
+            // 1. Guardamos la posición exacta antes de eliminarlo
+            float xMuerte = b.getX();
+            float yMuerte = b.getY();
+        
+            // 2. Generamos una nueva comida de Prioridad 2 en esa ubicación
+            //    (puedes ajustar los puntos de vida que da esa comida, por defecto 30 o el que tenga configurado)
+            agregarComida(xMuerte, yMuerte, 2, 30);
+        
+            // 3. Eliminamos el bichito de la población
             poblacion.morir(i);
         }
     }
@@ -304,10 +323,26 @@ void MotorGrafico::procesarEscenarioReproduccion(float dt)
 
 void MotorGrafico::procesarSimulacionGeneral(float dt)
 {
+    // 1. Sumar el tiempo transcurrido en cada fotograma
+    temporizadorComida += dt;
+
+    // 2. Extraer comida solo cuando se cumpla el intervalo definido
+    if (temporizadorComida >= intervaloComida && !colaComida.esvacia())
+    {
+        Comida c = extraerComidaSegunEstacion();
+        if (c.getId() != -1)
+        {
+            comidasActivas.push_back(c);
+        }
+        temporizadorComida = 0.0f; // Reiniciar el acumulador
+    }
+
+    // Actualización de bichitos en la población
     for (int i = 0; i < poblacion.longitud(); ++i) {
         poblacion.obtenerRef(i).actualizar(dt, comidasActivas, poblacion);
     }
     
+    // Filtrar y mantener solo las comidas activas
     std::vector<Comida> temporales;
     for (const auto& c : comidasActivas) {
         if (c.isActiva()) temporales.push_back(c);
@@ -322,15 +357,15 @@ void MotorGrafico::dibujar(sf::RenderTarget& destino, GestorRecursos& recursos)
     // 1) Fondo: cambia con la estación. Archivo: assets/textures/fondos/fondo_<estacion>.png
     const std::string estacion = enMinusculas(estaciones.obtener_actual().nombre);
     recursos.dibujarFondo(destino, "fondos/fondo_" + estacion, sf::Vector2u(250, 180),
-                          colorFondoEstacion(estacion), sf::Vector2f(0.0f, 0.0f), tamanoMundo);
+    colorFondoEstacion(estacion), sf::Vector2f(0.0f, 0.0f), tamanoMundo);
 
     // 2) Comida: antes círculos verdes; ahora un sprite por prioridad (entidades/comida_1, _2, _3).
     for (const auto& c : comidasActivas) {
         if (!c.isActiva()) continue;
 
         const sf::Texture& tex = recursos.textura("entidades/comida_" + std::to_string(c.getPrioridad()),
-                                                  sf::Vector2u(8, 8), colorComida(c.getPrioridad()),
-                                                  Forma::Circulo);
+        sf::Vector2u(8, 8), colorComida(c.getPrioridad()),
+        Forma::Circulo);
         sf::Sprite sprite(tex);
         sprite.setOrigin(tex.getSize().x / 2.0f, tex.getSize().y / 2.0f); // origen al centro
         sprite.setScale(Config::ESCALA_COMIDA, Config::ESCALA_COMIDA);
@@ -343,7 +378,7 @@ void MotorGrafico::dibujar(sf::RenderTarget& destino, GestorRecursos& recursos)
         const Bichito& b = poblacion.obtenerRef(i);
 
         const sf::Texture& tex = recursos.textura("entidades/bichito", sf::Vector2u(16, 16),
-                                                  sf::Color(50, 180, 255), Forma::Circulo);
+        sf::Color(50, 180, 255), Forma::Circulo);
         sf::Sprite sprite(tex);
         sprite.setOrigin(tex.getSize().x / 2.0f, tex.getSize().y / 2.0f);
 
@@ -360,3 +395,26 @@ void MotorGrafico::dibujar(sf::RenderTarget& destino, GestorRecursos& recursos)
         destino.draw(sprite);
     }
 }
+    
+    /*
+ * @brief Extrae una comida de la cola procesando la restricción de estación activa.
+ * @details Si la estación actual en la ColaCircular es Primavera o Verano, extrae
+ *          usando 'extraer_segun_probabilidad()' (distribución entre las 3 prioridades).
+ *          Si es Otoño e Invierno, utiliza 'extraer_sin_prioridad_alta()' para simular
+ *          escasez omitiendo la comida de Prioridad 1.
+ * @return Comida Objeto extraído de la cola correspondiente, o Comida(-1, -1, -1) si no hay disponibilidad.
+ */
+Comida MotorGrafico::extraerComidaSegunEstacion()
+{
+    Estacion estacionActual = estaciones.obtener_actual();
+
+    if (estacionActual.nombre == "Primavera" || estacionActual.nombre == "Verano")
+    {
+        return colaComida.extraer_segun_probabilidad();
+    }
+    else
+    {
+        return colaComida.extraer_sin_prioridad_alta();
+    }
+}
+

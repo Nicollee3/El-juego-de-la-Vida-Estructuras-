@@ -37,27 +37,33 @@ void Bichito::cambiarVida(float delta) {
 void Bichito::evaluarEstado() {
     EstadoBichito nuevoEstado;
 
-    if (vida < 50.0f) {
-        setVelocidad(120.0f);
-        estado = EstadoBichito::BuscandoComida;
-    } else if (vida > 70.0f) {
-        setVelocidad(120.0f);
-        estado = EstadoBichito::BuscandoPareja;
-    } else {
-        setVelocidad(60.0f);
-        estado = EstadoBichito::DePaseo;
+    if(estado == EstadoBichito::BuscandoComida && vida < 100){
+        return;
     }
+
+    if (vida > 90){
+        // setVelocidad(60.0f);
+        nuevoEstado = EstadoBichito::DePaseo;
+    } else if (vida > 70){
+        // setVelocidad(120.0f);
+        nuevoEstado = EstadoBichito::BuscandoPareja;
+    } else if (vida > 50){
+        // setVelocidad(120.0f);
+        nuevoEstado = EstadoBichito::DePaseo;
+    }else{
+        // setVelocidad(120.0f);
+        nuevoEstado = EstadoBichito::BuscandoComida;
+    }
+
     // Si el bichito cambia a estar de paseo baja su velocidad
-    //if (nuevoEstado != estado) {
-    //    estado = nuevoEstado;
-    //    float nVelocidad = (estado == EstadoBichito::DePaseo) ? 60.0f : 120.0f;
-    //    setVelocidad(nVelocidad);
-    //}
+    if (nuevoEstado != estado) {
+        estado = nuevoEstado;
+        float nVelocidad = (estado == EstadoBichito::DePaseo) ? 60.0f : 120.0f;
+        setVelocidad(nVelocidad);
+    }
 }
 
 void Bichito::buscarComida(std::vector<Comida>& comidas) {
-    if (comidas.empty()) return;
-
     int idxCercano = -1;
     float minDist = 999999.0f;
 
@@ -80,6 +86,9 @@ void Bichito::buscarComida(std::vector<Comida>& comidas) {
             cambiarVida(static_cast<float>(comidas[idxCercano].getPuntosDeVida()));
             comidas[idxCercano].setActiva(false);
         }
+    } else {
+        // Si no hay comida activa, pasea aleatoriamente
+        pasear();
     }
 }
 

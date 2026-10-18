@@ -7,7 +7,7 @@
 #include "ColaConPrioridad.h"
 #include "ColaCircular.h"
 
-class GestorRecursos; // declaración adelantada: solo se necesita el nombre en este .h
+class GestorRecursos; // declaración adelantada
 
 enum class ModoSimulacion { Normal, EscenarioCompetencia, EscenarioReproduccion };
 
@@ -26,6 +26,9 @@ private:
     float temporizadorEstacion;
     ModoSimulacion modoActual;
 
+    float temporizadorComida;
+    float intervaloComida;
+
     // NUEVO: estado que controla la barra lateral
     bool pausado;
     float velocidadSim;     // multiplicador del tiempo (0.5x ... 4x)
@@ -37,6 +40,7 @@ private:
     void procesarEscenarioCompetencia(float dt);
     void procesarEscenarioReproduccion(float dt);
     void procesarSimulacionGeneral(float dt);
+    Comida extraerComidaSegunEstacion();
 
 public:
     // CAMBIO: recibe el tamaño del mundo en vez de crear la ventana.
