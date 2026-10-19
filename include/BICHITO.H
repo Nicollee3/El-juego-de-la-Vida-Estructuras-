@@ -34,6 +34,7 @@ private:
     float tiempoCercaPareja;
     int idParejaObjetivo;
     float cooldownReproduccion;
+    bool siguiendoComida;
 
     // Declaración de métodos privados (sus cuerpos se mueven al .cpp)
     void evaluarEstado();
@@ -95,6 +96,7 @@ public:
     void setTiempoCercaPareja(float _t) { tiempoCercaPareja = _t; }
     void setIdParejaObjetivo(int _idP) { idParejaObjetivo = _idP; }
     void setCooldownReproduccion(float _cd) { cooldownReproduccion = _cd; }
+    void setSiguiendoComida(bool _sc) { siguiendoComida = _sc; }
 
     // Declaración de métodos con lógica pesada (sus cuerpos se mueven al .cpp)
     /*

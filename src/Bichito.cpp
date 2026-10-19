@@ -10,12 +10,14 @@
 Bichito::Bichito() 
     : id(0), vida(30.0f), x(0.0f), y(0.0f), targetX(0.0f), targetY(0.0f),
       velocidad(120.0f), estado(EstadoBichito::BuscandoComida),
-      tiempoCercaPareja(0.0f), idParejaObjetivo(-1), cooldownReproduccion(0.0f) {}
+      tiempoCercaPareja(0.0f), idParejaObjetivo(-1), cooldownReproduccion(0.0f), 
+      siguiendoComida(false){}
 
 Bichito::Bichito(int _id, float _vida, float _x, float _y) 
     : id(_id), vida(_vida), x(_x), y(_y), targetX(_x), targetY(_y),
       velocidad(120.0f), estado(EstadoBichito::BuscandoComida),
-      tiempoCercaPareja(0.0f), idParejaObjetivo(-1), cooldownReproduccion(0.0f) {}
+      tiempoCercaPareja(0.0f), idParejaObjetivo(-1), cooldownReproduccion(0.0f), 
+      siguiendoComida(false) {}
 
 // --- SETTERS CON LÓGICA ---
 bool Bichito::setVida(float _vida) {
@@ -60,6 +62,10 @@ void Bichito::evaluarEstado() {
         estado = nuevoEstado;
         float nVelocidad = (estado == EstadoBichito::DePaseo) ? 60.0f : 120.0f;
         setVelocidad(nVelocidad);
+        siguiendoComida = false;
+        if (estado == EstadoBichito::DePaseo) {
+            destinoAleatorio();
+        }
     }
 }
 
@@ -80,14 +86,21 @@ void Bichito::buscarComida(std::vector<Comida>& comidas) {
 
     if (idxCercano != -1) {
         setTarget(comidas[idxCercano].getX(), comidas[idxCercano].getY());
+        siguiendoComida = true;
 
         // Comer si está al alcance
         if (minDist <= 15.0f) {
             cambiarVida(static_cast<float>(comidas[idxCercano].getPuntosDeVida()));
             comidas[idxCercano].setActiva(false);
+            siguiendoComida = false;
+            destinoAleatorio();
         }
     } else {
-        // Si no hay comida activa, pasea aleatoriamente
+        // Si no hay comida activa o estaba persiguiendo una que ya no existe:
+        if (siguiendoComida) {
+            siguiendoComida = false;
+            destinoAleatorio(); // Reacciona de inmediato cambiando de destino
+        }
         pasear();
     }
 }
