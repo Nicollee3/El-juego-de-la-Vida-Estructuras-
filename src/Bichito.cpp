@@ -149,26 +149,26 @@ void Bichito::buscarPareja(PilaDinamica& poblacion, float dt) {
 }
 
 void Bichito::reproducirseCon(Bichito& pareja, PilaDinamica& poblacion) {
-    // Calcular punto medio para el bebé
+    // 1. Calcular las coordenadas y crear la instancia del hijo
     float hijoX = (this->x + pareja.getX()) / 2.0f;
     float hijoY = (this->y + pareja.getY()) / 2.0f;
 
     int nuevoId = rand() % 9000 + 1000;
     Bichito hijo(nuevoId, 40.0f, hijoX, hijoY);
     hijo.setTarget(hijoX + (rand() % 100 - 50), hijoY + (rand() % 100 - 50));
-    
-    poblacion.generar(hijo);
 
-    // Desgaste de energía (al bajar la vida de 70, volverán a cambiar de estado)
-    cambiarVida(-30.0f);
+    // 2. Modificar a los padres
+    this->cambiarVida(-30.0f);
     pareja.cambiarVida(-30.0f);
 
-    // Reiniciar contadores y cooldowns
     this->tiempoCercaPareja = 0.0f;
     pareja.setTiempoCercaPareja(0.0f);
 
     this->cooldownReproduccion = 10.0f; // 10 segundos sin reproducirse
     pareja.setCooldownReproduccion(10.0f);
+
+    // 3. Insertar al hijo al final
+    poblacion.generar(hijo);
 }
 
 void Bichito::pasear() {

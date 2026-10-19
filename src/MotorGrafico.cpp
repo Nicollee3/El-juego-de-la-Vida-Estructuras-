@@ -34,7 +34,7 @@ namespace
     {
         if (prioridad == 1) return sf::Color(255, 215, 0);  // dorada
         if (prioridad == 2) return sf::Color(90, 200, 90);  // verde
-        return sf::Color(150, 110, 70);                      // marrón
+        return sf::Color(150, 110, 70);                     // cafe
     }
 }
 
@@ -114,7 +114,6 @@ void MotorGrafico::cargarEscenarioCompetencia(int nAgentes)
     }
 
     // Ubicar 1 unidad de comida en el centro
-    // CAMBIO: antes ventana.getSize(); ahora el tamaño del mundo (sin contar la barra lateral).
     float centroX = tamanoMundo.x / 2.0f;
     float centroY = tamanoMundo.y / 2.0f;
     agregarComida(centroX, centroY, 1, 50);
