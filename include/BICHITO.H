@@ -58,6 +58,10 @@ private:
      * @brief Controla el movimiento de patrullaje o paseo cuando no hay estímulos cercanos.
      */
     void pasear();
+    /*
+     * @brief Genera un x,y aleatorio para pasear() 
+     */
+    void destinoAleatorio();
 
 public:
     /*

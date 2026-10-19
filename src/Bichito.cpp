@@ -164,17 +164,23 @@ void Bichito::pasear() {
     float dy = targetY - y;
     float dist = std::sqrt(dx * dx + dy * dy);
 
-    float margen = 30.0f;
-
     if (dist <= 10.0f) {
-        float minX = margen;
-        float maxX = Config::ANCHO_MUNDO - margen;
-        float minY = margen;
-        float maxY = Config::ALTO_MUNDO - margen;
-
-        targetX = minX + (float)rand() / RAND_MAX*(Config::ANCHO_MUNDO);
-        targetY = minY + (float)rand() / RAND_MAX*(Config::ALTO_MUNDO); 
+        destinoAleatorio();
     }
+}
+
+void Bichito::destinoAleatorio() {
+    float margen = 30.0f;
+    float minX = margen;
+    float maxX = Config::ANCHO_MUNDO - margen;
+    float minY = margen;
+    float maxY = Config::ALTO_MUNDO - margen;
+
+    float rangoX = maxX - minX;
+    float rangoY = maxY - minY;
+
+    targetX = minX + (static_cast<float>(rand()) / RAND_MAX) * rangoX;
+    targetY = minY + (static_cast<float>(rand()) / RAND_MAX) * rangoY;
 }
 
 // --- MÉTODOS PÚBLICOS DE MOVIMIENTO Y ACTUALIZACIÓN ---
