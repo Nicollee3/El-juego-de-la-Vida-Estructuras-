@@ -1,7 +1,11 @@
 /*
  * @file PilaDinamica.h
- * @brief Implementación de estructura de datos lineal de tipo PILA utilizando arreglo dinámico
- * @details Aquí se gestiona un arreglo dinámico de BICHITOS. Podemos agregar y eliminar objetos.
+ * @brief Implementación de estructura de datos lineal de tipo PILA utilizando arreglo dinámico (genérica).
+ * @details Es una PLANTILLA (template): PilaDinamica<T> gestiona un arreglo dinámico de elementos de tipo T.
+ *          En este proyecto se usa con dos tipos:
+ *            - PilaDinamica<Bichito> : la población de bichitos.
+ *            - PilaDinamica<Comida>  : la comida activa en el mundo.
+ *          Podemos agregar y eliminar objetos.
  *          El tamaño del arreglo se ajusta de manera dinámica de acuerdo a la cantidad de elementos apoyándose en la proporción áurea.
  *          Se implementa la técnica "Swap and Pop" para eliminaciones en O(1) desde cualquier posición.
  *
@@ -14,20 +18,38 @@
 
 #include <iostream>
 #include "Bichito.h"
+#include "Comida.h"
 
+/*
+ * Elemento "Entidad": es lo que devuelven obtener() y obtenerRef() cuando el índice no es válido.
+ * Por defecto es T(); para Bichito y Comida se conserva el valor de control con -1.
+ */
+namespace detalle
+{
+    template <typename T>
+    T crearEntidad() { return T(); }
+
+    template <>
+    inline Bichito crearEntidad<Bichito>() { return Bichito(-1, -1); }
+
+    template <>
+    inline Comida crearEntidad<Comida>() { return Comida(-1, -1, -1); }
+}
+
+template <typename T>
 class PilaDinamica
 {
 public:
     /*
      * @brief Construye una nueva Pila Dinámica vacía.
      * @details Inicializa el contador de elementos (N) en 0, asigna una capacidad inicial (10)
-     * y reserva memoria para el arreglo de Bichitos llamado poblacion.
+     * y reserva memoria para el arreglo de elementos llamado datos.
      */
     PilaDinamica()
     {
         N = 0;
         tamano = 10;
-        poblacion = new Bichito[tamano];
+        datos = new T[tamano];
     };
     /*
      * @brief Destructor de la Pila Dinámica.
@@ -35,33 +57,38 @@ public:
      */
     ~PilaDinamica()
     {
-        delete[] poblacion;
+        delete[] datos;
     };
+
+    // Copiar una pila duplicaría el puntero y la memoria se liberaría dos veces: se prohíbe copiarla.
+    PilaDinamica(const PilaDinamica &) = delete;
+    PilaDinamica &operator=(const PilaDinamica &) = delete;
+
     /*
-     * @brief Agrega un nuevo bichito "en la parte de arriba" de la pila.
+     * @brief Agrega un nuevo elemento "en la parte de arriba" de la pila.
      * @details Si la pila alcanza su capacidad máxima, duplica/expande el tamaño del arreglo
      *          multiplicando la capacidad actual por la razón áurea (~1.618).
-     * @param d El objeto Bichito que se desea "generar" en el juego de la vida, es decir agregarlo a la pila.
+     * @param d El objeto que se desea "generar" en el juego de la vida, es decir agregarlo a la pila.
      */
-    void generar(Bichito d)
+    void generar(T d)
     {
         if (N == tamano)
         {
             int ntamano = (int)(tamano * aureo);
-            Bichito *ndatos = new Bichito[ntamano];
+            T *ndatos = new T[ntamano];
             for (int i = 0; i < tamano; i++)
             {
-                ndatos[i] = poblacion[i];
+                ndatos[i] = datos[i];
             };
-            delete[] poblacion;
-            poblacion = ndatos;
+            delete[] datos;
+            datos = ndatos;
             tamano = ntamano;
         };
-        poblacion[N] = d;
+        datos[N] = d;
         N++;
     };
     /*
-     * @brief Elimina el elemento en la partde de arriba de la pila, es decir, el último elemento agregado.
+     * @brief Elimina el elemento en la parte de arriba de la pila, es decir, el último elemento agregado.
      * @details Reduce el contador de elementos y evalúa si la memoria debe contraerse
      *          según las restricciones de la razón áurea para optimizar espacio.
      */
@@ -72,23 +99,24 @@ public:
         if (N * aureo * aureo < tamano && tamano > 10)
         {
             int ntamano = (int)(N * aureo);
-            Bichito *ndatos = new Bichito[ntamano];
+            T *ndatos = new T[ntamano];
             for (int i = 0; i < N; i++)
             {
-                ndatos[i] = poblacion[i];
+                ndatos[i] = datos[i];
             };
-            delete[] poblacion;
-            poblacion = ndatos;
+            delete[] datos;
+            datos = ndatos;
             tamano = ntamano;
         };
         N--;
     };
     void morir(int i)
     /*
-     * @brief Elimina un bichito de cualquier posición en tiempo O(1) usando "Swap and Pop".
+     * @brief Elimina un elemento de cualquier posición en tiempo O(1) usando "Swap and Pop".
      * @details Intercambia el elemento ubicado en el índice i con el último elemento válido.
      *        Luego, llama a borrar() para eliminar el último elemento, reduciendo así la cantidad de elementos en la pila.
-     * @param i El índice del bichito que se desea eliminar.
+     *        Nota: el orden de los elementos restantes puede cambiar.
+     * @param i El índice del elemento que se desea eliminar.
      */
     {
         if (i < 0 || i >= N)
@@ -96,58 +124,74 @@ public:
             std::cerr << "Indice " << i << " fuera de rango para morir()\n";
             return;
         }
-        Bichito temp = poblacion[i];
-        poblacion[i] = poblacion[N - 1];
-        poblacion[N - 1] = temp;
+        T temp = datos[i];
+        datos[i] = datos[N - 1];
+        datos[N - 1] = temp;
         borrar();
     }
-    int longitud()
     /*
-     * @brief Obtiene la cantidad actual de bichitos almacenados en la pila.
+     * @brief Elimina TODOS los elementos y vuelve a la capacidad inicial (10).
+     * @details Reemplaza al antiguo clear() de std::vector.
+     */
+    void vaciar()
+    {
+        delete[] datos;
+        tamano = 10;
+        N = 0;
+        datos = new T[tamano];
+    }
+    int longitud() const
+    /*
+     * @brief Obtiene la cantidad actual de elementos almacenados en la pila.
      * @return int Número de elementos activos (N).
      */
     {
         return N;
     };
     /*
-     * @brief Obtiene el objeto Bichito ubicado en una posición i-ésima sin eliminarlo. Nos sirve para consultar.
+     * @brief Obtiene el objeto ubicado en una posición i-ésima sin eliminarlo. Nos sirve para consultar.
      * @param i Índice del elemento a consultar.
-     * @return Bichito Copia del objeto encontrado o un bichito de control con valores -1 si el índice no es válido.
+     * @return T Copia del objeto encontrado o un objeto de control con valores -1 si el índice no es válido.
      */
-    Bichito obtener(int i)
+    T obtener(int i) const
     {
         if (i < 0 || i >= N)
         {
             std::cerr << "Error: Indice fuera de rango\n";
-            return Bichito(-1, -1);
+            return detalle::crearEntidad<T>();
         }
-        return poblacion[i];
+        return datos[i];
     };
 
     /*
      * @brief Devuelve la capacidad actual del arreglo dinámico (no la cantidad de elementos).
      * @return int Tamaño reservado en memoria (tamano). Se usa para mostrarlo en la barra lateral.
      */
-    int capacidad()
+    int capacidad() const
     {
         return tamano;
     }
 
-    Bichito& obtenerRef(int i)
+    /*
+     * @brief Devuelve una REFERENCIA al elemento i-ésimo, para poder consultarlo y modificarlo sin copiarlo.
+     * @details La referencia deja de ser válida si luego se llama a generar() (el arreglo puede moverse en memoria).
+     */
+    T &obtenerRef(int i)
     {
         if (i < 0 || i >= N)
         {
-            static Bichito centinela(-1, -1);
-            return centinela;
+            static T Entidad = detalle::crearEntidad<T>();
+            return Entidad;
         }
-        return poblacion[i];
+        return datos[i];
     }
-    
+
 protected:
-    Bichito *poblacion; // Poblacion es un apuntador, que esta apuntando a la direccion de memoria donde estan guardados los objetos bichito
+    T *datos; // datos es un apuntador a la dirección de memoria donde están guardados los objetos de tipo T
     int N;
     int tamano;
     double aureo = 1.618;
 };
 
 #endif
+

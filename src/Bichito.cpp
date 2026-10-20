@@ -1,7 +1,6 @@
 #include <cmath>          
 #include <cstdlib>        
 #include <algorithm>      
-#include <vector>
 #include "Bichito.h"
 #include "PilaDinamica.h" 
 #include "gui/Config.h"
@@ -69,29 +68,30 @@ void Bichito::evaluarEstado() {
     }
 }
 
-void Bichito::buscarComida(std::vector<Comida>& comidas) {
+void Bichito::buscarComida(PilaDinamica<Comida>& comidas) {
     int idxCercano = -1;
     float minDist = 999999.0f;
 
-    for (size_t j = 0; j < comidas.size(); ++j) {
-        if (!comidas[j].isActiva()) continue;
-        float dx = comidas[j].getX() - x;
-        float dy = comidas[j].getY() - y;
+    for (int j = 0; j < comidas.longitud(); ++j) {
+        if (!comidas.obtenerRef(j).isActiva()) continue;
+        float dx = comidas.obtenerRef(j).getX() - x;
+        float dy = comidas.obtenerRef(j).getY() - y;
         float dist = std::sqrt(dx * dx + dy * dy);
         if (dist < minDist) {
             minDist = dist;
-            idxCercano = static_cast<int>(j);
+            idxCercano = j;
         }
     }
 
     if (idxCercano != -1) {
-        setTarget(comidas[idxCercano].getX(), comidas[idxCercano].getY());
+        Comida& masCercana = comidas.obtenerRef(idxCercano);
+        setTarget(masCercana.getX(), masCercana.getY());
         siguiendoComida = true;
 
         // Comer si está al alcance
         if (minDist <= 15.0f) {
-            cambiarVida(static_cast<float>(comidas[idxCercano].getPuntosDeVida()));
-            comidas[idxCercano].setActiva(false);
+            cambiarVida(static_cast<float>(masCercana.getPuntosDeVida()));
+            masCercana.setActiva(false);
             siguiendoComida = false;
             destinoAleatorio();
         }
@@ -105,7 +105,7 @@ void Bichito::buscarComida(std::vector<Comida>& comidas) {
     }
 }
 
-void Bichito::buscarPareja(PilaDinamica& poblacion, float dt) {
+void Bichito::buscarPareja(PilaDinamica<Bichito>& poblacion, float dt) {
     int idxPareja = -1;
     float minDist = 999999.0f;
 
@@ -148,7 +148,7 @@ void Bichito::buscarPareja(PilaDinamica& poblacion, float dt) {
     }
 }
 
-void Bichito::reproducirseCon(Bichito& pareja, PilaDinamica& poblacion) {
+void Bichito::reproducirseCon(Bichito& pareja, PilaDinamica<Bichito>& poblacion) {
     // 1. Calcular las coordenadas y crear la instancia del hijo
     float hijoX = (this->x + pareja.getX()) / 2.0f;
     float hijoY = (this->y + pareja.getY()) / 2.0f;
@@ -210,7 +210,7 @@ void Bichito::moverHaciaObjetivo(float dt) {
     }
 }
 
-void Bichito::actualizar(float dt, std::vector<Comida>& comidas, PilaDinamica& poblacion) {
+void Bichito::actualizar(float dt, PilaDinamica<Comida>& comidas, PilaDinamica<Bichito>& poblacion) {
     evaluarEstado();
 
     switch (estado) {

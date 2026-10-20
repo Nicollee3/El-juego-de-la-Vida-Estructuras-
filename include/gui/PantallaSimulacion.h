@@ -25,7 +25,7 @@ public:
 
 private:
     // El orden importa: motor_ guarda una referencia a poblacion_, así que poblacion_ va primero.
-    PilaDinamica poblacion_;
+    PilaDinamica<Bichito> poblacion_;
     MotorGrafico motor_;
     BarraLateral barra_;
     Etiqueta etPausa_;

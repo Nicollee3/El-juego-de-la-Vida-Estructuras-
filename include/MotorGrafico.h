@@ -2,7 +2,6 @@
 #define MOTOR_GRAFICO_H
 
 #include <SFML/Graphics.hpp>
-#include <vector>
 #include "PilaDinamica.h"
 #include "ColaConPrioridad.h"
 #include "ColaCircular.h"
@@ -17,9 +16,9 @@ private:
     // CAMBIO: ya no existe "sf::RenderWindow ventana". La ventana ahora es de la clase Aplicacion.
     // El motor solo necesita saber qué tan grande es el "mundo" donde viven los bichitos.
     sf::Vector2f tamanoMundo;
-    PilaDinamica& poblacion;
+    PilaDinamica<Bichito>& poblacion;
     ColaConPrioridad colaComida;
-    std::vector<Comida> comidasActivas;
+    PilaDinamica<Comida> comidasActivas; // antes std::vector<Comida>
     ColaCircular estaciones;
 
     float tiempoCambioEstacion;
@@ -44,7 +43,7 @@ private:
 
 public:
     // CAMBIO: recibe el tamaño del mundo en vez de crear la ventana.
-    MotorGrafico(PilaDinamica& _poblacion, sf::Vector2f _tamanoMundo);
+    MotorGrafico(PilaDinamica<Bichito>& _poblacion, sf::Vector2f _tamanoMundo);
 
     // CAMBIO: desaparece ejecutar(); su trabajo se reparte en estos tres métodos
     // que llama PantallaSimulacion en cada frame.
@@ -77,7 +76,7 @@ public:
     ModoSimulacion getModo() const { return modoActual; }
     Estacion getEstacionActual() { return estaciones.obtener_actual(); } // no es const: obtener_actual() no lo es
     int getNumBichitos() { return poblacion.longitud(); }
-    int getNumComidas() const { return static_cast<int>(comidasActivas.size()); }
+    int getNumComidas() const { return comidasActivas.longitud(); }
     int getCapacidadPoblacion() { return poblacion.capacidad(); }
 };
 

@@ -12,7 +12,7 @@
 #include <cmath>
 #include <Comida.h>
 
-class PilaDinamica;
+template <typename T> class PilaDinamica; // plantilla: se usa como PilaDinamica<Bichito> y PilaDinamica<Comida>
 /*
  * @enum EstadoBichito
  * @brief Define los posibles estados de comportamiento de un bichito en la simulación.
@@ -39,22 +39,22 @@ private:
     // Declaración de métodos privados (sus cuerpos se mueven al .cpp)
     void evaluarEstado();
     /*
-     * @brief Busca la comida más cercana dentro del vector de elementos disponibles.
-     * @param comidas Vector de objetos Comida presentes en el entorno.
+     * @brief Busca la comida más cercana dentro de la pila de comida disponible.
+     * @param comidas PilaDinamica de objetos Comida presentes en el entorno.
      */
-    void buscarComida(std::vector<Comida>& comidas);
+    void buscarComida(PilaDinamica<Comida>& comidas);
     /*
      * @brief Gestiona la búsqueda y aproximación hacia un compañero compatible para la reproducción.
      * @param poblacion Referencia a la estructura que almacena la población actual de bichitos.
      * @param dt Incremento de tiempo (delta time) transcurrido desde el último fotograma.
      */
-    void buscarPareja(PilaDinamica& poblacion, float dt);
+    void buscarPareja(PilaDinamica<Bichito>& poblacion, float dt);
     /*
      * @brief Ejecuta la lógica de reproducción con una pareja seleccionada.
      * @param pareja Referencia al bichito con el cual se va a reproducir.
      * @param poblacion Referencia a la población para registrar al nuevo descendiente.
      */
-    void reproducirseCon(Bichito& pareja, PilaDinamica& poblacion);
+    void reproducirseCon(Bichito& pareja, PilaDinamica<Bichito>& poblacion);
     /*
      * @brief Controla el movimiento de patrullaje o paseo cuando no hay estímulos cercanos.
      */
@@ -107,10 +107,10 @@ public:
     /*
      * @brief Actualiza la lógica del bichito (comportamiento, movimiento, vida) en cada ciclo del juego.
      * @param dt Incremento de tiempo transcurrido.
-     * @param comidas Vector con las fuentes de comida disponibles en la simulación.
+     * @param comidas PilaDinamica con las fuentes de comida disponibles en la simulación.
      * @param poblacion Referencia a la estructura dinámica que almacena la población general.
      */
-    void actualizar(float dt, std::vector<Comida>& comidas, PilaDinamica& poblacion);
+    void actualizar(float dt, PilaDinamica<Comida>& comidas, PilaDinamica<Bichito>& poblacion);
     /*
      * @brief Incrementa o decrementa la vida actual del bichito de forma segura.
      * @param delta Cantidad de vida a sumar (positiva) o restar (negativa).

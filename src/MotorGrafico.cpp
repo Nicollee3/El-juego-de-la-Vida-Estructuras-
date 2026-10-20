@@ -39,7 +39,7 @@ namespace
 }
 
 // CAMBIO: ya no se crea la ventana aquí (ni setFramerateLimit): lo hace Aplicacion.
-MotorGrafico::MotorGrafico(PilaDinamica& _poblacion, sf::Vector2f _tamanoMundo)
+MotorGrafico::MotorGrafico(PilaDinamica<Bichito>& _poblacion, sf::Vector2f _tamanoMundo)
     : tamanoMundo(_tamanoMundo),
     poblacion(_poblacion),
     tiempoCambioEstacion(10.0f),
@@ -70,16 +70,14 @@ void MotorGrafico::agregarComida(float x, float y, int prioridad, int puntosVida
 {
     static int idComida = 1;
 
-    // Validación ambiental: En Otoño/Invierno no se permite comida de Prioridad 1 (Alta)
     Estacion estacionActual = estaciones.obtener_actual();
-    if ((estacionActual.nombre == "Otono" || estacionActual.nombre == "Invierno") && prioridad == 1)
-    {
-        prioridad = 2; // Se fuerza a Prioridad Media por escasez
-    }
+    // if ((estacionActual.nombre == "Otono" || estacionActual.nombre == "Invierno") && prioridad == 1)
+    // {
+    //     prioridad = 2;
+    // }
 
     Comida c(idComida++, prioridad, puntosVida, x, y);
-    comidasActivas.push_back(c);
-    colaComida.insertar(c);
+    comidasActivas.generar(c); // Solo va a la lista activa (antes push_back)
 }
 
 void MotorGrafico::agregarBichito()
@@ -106,7 +104,7 @@ void MotorGrafico::cargarEscenarioCompetencia(int nAgentes)
     if (nAgentes < 1) nAgentes = 1;
 
     modoActual = ModoSimulacion::EscenarioCompetencia;
-    comidasActivas.clear();
+    comidasActivas.vaciar(); // antes clear()
 
     // Limpiar población reiniciando índices (eliminando iterativamente)
     while (poblacion.longitud() > 0) {
@@ -135,7 +133,7 @@ void MotorGrafico::cargarEscenarioCompetencia(int nAgentes)
 void MotorGrafico::cargarEscenarioReproduccion()
 {
     modoActual = ModoSimulacion::EscenarioReproduccion;
-    comidasActivas.clear();
+    comidasActivas.vaciar(); // antes clear()
 
     while (poblacion.longitud() > 0) {
         poblacion.morir(0);
@@ -240,9 +238,9 @@ void MotorGrafico::actualizarFisica(float dt)
 
 void MotorGrafico::procesarEscenarioCompetencia(float dt)
 {
-    if (comidasActivas.empty()) return;
+    if (comidasActivas.longitud() == 0) return; // antes empty()
 
-    Comida& comidaUnica = comidasActivas[0];
+    Comida& comidaUnica = comidasActivas.obtenerRef(0); // antes comidasActivas[0]
     float radioColisionComida = 15.0f;
 
     for (int i = 0; i < poblacion.longitud(); ++i) {
@@ -264,7 +262,7 @@ void MotorGrafico::procesarEscenarioCompetencia(float dt)
 
     // Eliminar comida consumida
     if (!comidaUnica.isActiva()) {
-        comidasActivas.clear();
+        comidasActivas.vaciar(); // antes clear()
     }
 }
 
@@ -331,7 +329,7 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
         Comida c = extraerComidaSegunEstacion();
         if (c.getId() != -1)
         {
-            comidasActivas.push_back(c);
+            comidasActivas.generar(c); // antes push_back
         }
         temporizadorComida = 0.0f; // Reiniciar el acumulador
     }
@@ -341,12 +339,13 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
         poblacion.obtenerRef(i).actualizar(dt, comidasActivas, poblacion);
     }
     
-    // Filtrar y mantener solo las comidas activas
-    std::vector<Comida> temporales;
-    for (const auto& c : comidasActivas) {
-        if (c.isActiva()) temporales.push_back(c);
+    // Eliminar las comidas ya consumidas. Se recorre de atrás hacia adelante porque morir() usa
+    // "Swap and Pop": mueve el último elemento al hueco, y así no se salta ninguno.
+    for (int i = comidasActivas.longitud() - 1; i >= 0; --i) {
+        if (!comidasActivas.obtenerRef(i).isActiva()) {
+            comidasActivas.morir(i);
+        }
     }
-    comidasActivas = temporales;
 }
 
 // CAMBIO: antes se llamaba renderizar() y dibujaba en su propia ventana (clear + display).
@@ -359,7 +358,8 @@ void MotorGrafico::dibujar(sf::RenderTarget& destino, GestorRecursos& recursos)
     colorFondoEstacion(estacion), sf::Vector2f(0.0f, 0.0f), tamanoMundo);
 
     // 2) Comida: antes círculos verdes; ahora un sprite por prioridad (entidades/comida_1, _2, _3).
-    for (const auto& c : comidasActivas) {
+    for (int i = 0; i < comidasActivas.longitud(); ++i) {
+        const Comida& c = comidasActivas.obtenerRef(i);
         if (!c.isActiva()) continue;
 
         const sf::Texture& tex = recursos.textura("entidades/comida_" + std::to_string(c.getPrioridad()),
