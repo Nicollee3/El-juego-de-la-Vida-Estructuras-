@@ -28,7 +28,7 @@ private:
     float temporizadorComida;
     float intervaloComida;
 
-    // NUEVO: estado que controla la barra lateral
+    // Estado que controla la barra lateral
     bool pausado;
     float velocidadSim;     // multiplicador del tiempo (0.5x ... 4x)
     int prioridadComida;    // prioridad (1..3) de la comida que se coloca con clic
@@ -40,6 +40,9 @@ private:
     void procesarEscenarioReproduccion(float dt);
     void procesarSimulacionGeneral(float dt);
     Comida extraerComidaSegunEstacion();
+
+    void inicializarPoolComida();
+    float calcularIntervaloComida(const std::string& nombreEstacion);
 
 public:
     // CAMBIO: recibe el tamaño del mundo en vez de crear la ventana.
@@ -55,6 +58,7 @@ public:
     // CAMBIO: si no se indica nAgentes (o es negativo) se usa el valor configurado.
     void cargarEscenarioCompetencia(int nAgentes = -1);
     void cargarEscenarioReproduccion();
+    void cargarSimulacionGeneral(); // Inicia el modo normal pausado con bichitos aleatorios
 
     // ---------- NUEVO: control desde la barra lateral ----------
     void setPausa(bool p) { pausado = p; }

@@ -161,6 +161,17 @@ public:
     {
         return colas[0].esvacia() && colas[1].esvacia() && colas[2].esvacia();
     }
+
+    /*
+     * @brief Vacía todas las colas de la estructura.
+     */
+    void vaciar()
+    {
+        while (!esvacia())
+        {
+            extraer_maxima_prioridad();
+        }
+    }
 };
 
 #endif

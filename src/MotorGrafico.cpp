@@ -47,7 +47,7 @@ MotorGrafico::MotorGrafico(PilaDinamica<Bichito>& _poblacion, sf::Vector2f _tama
     temporizadorComida(0.0f),
     intervaloComida(2.0f),
     modoActual(ModoSimulacion::Normal),
-    pausado(false),
+    pausado(true),
     velocidadSim(1.0f),
     prioridadComida(1),
     agentesCompetencia(5)
@@ -97,6 +97,31 @@ void MotorGrafico::quitarBichito()
     if (poblacion.longitud() > 0)
         poblacion.borrar();
 }
+
+void MotorGrafico::cargarSimulacionGeneral()
+{
+    modoActual = ModoSimulacion::Normal;
+    pausado = true; // Empieza pausado
+    comidasActivas.vaciar();
+
+    // Limpiar población anterior
+    while (poblacion.longitud() > 0) {
+        poblacion.morir(0);
+    }
+
+    // Llenar el pool inicial en la cola
+    inicializarPoolComida();
+
+    // Generar la cantidad de bichitos elegida en Opciones en posiciones aleatorias
+    for (int i = 0; i < agentesCompetencia; ++i) {
+        agregarBichito();
+    }
+
+    intervaloComida = calcularIntervaloComida(estaciones.obtener_actual().nombre);
+    temporizadorComida = 0.0f;
+}
+
+
 
 void MotorGrafico::cargarEscenarioCompetencia(int nAgentes)
 {
@@ -320,29 +345,50 @@ void MotorGrafico::procesarEscenarioReproduccion(float dt)
 
 void MotorGrafico::procesarSimulacionGeneral(float dt)
 {
-    // 1. Sumar el tiempo transcurrido en cada fotograma
     temporizadorComida += dt;
 
-    // 2. Extraer comida solo cuando se cumpla el intervalo definido
+    // Extraer del pool según el temporizador e intervalo con jitter
     if (temporizadorComida >= intervaloComida && !colaComida.esvacia())
     {
         Comida c = extraerComidaSegunEstacion();
         if (c.getId() != -1)
         {
-            comidasActivas.generar(c); // antes push_back
+            // Asignar posición aleatoria en el mapa justo al desencolar
+            float margen = 30.0f;
+            float minX = margen;
+            float maxX = Config::ANCHO_MUNDO - margen;
+            float minY = margen;
+            float maxY = Config::ALTO_MUNDO - margen;
+
+            float rangoX = maxX - minX;
+            float rangoY = maxY - minY;
+
+            float rx = minX + (static_cast<float>(rand()) / RAND_MAX) * rangoX;
+            float ry = minY + (static_cast<float>(rand()) / RAND_MAX) * rangoY;
+            c.setPosicion(rx, ry);
+
+            comidasActivas.generar(c);
         }
-        temporizadorComida = 0.0f; // Reiniciar el acumulador
+
+        // Recalcular intervalo para el próximo drop
+        intervaloComida = calcularIntervaloComida(estaciones.obtener_actual().nombre);
+        temporizadorComida = 0.0f;
     }
 
-    // Actualización de bichitos en la población
+    // Actualización física de bichitos
     for (int i = 0; i < poblacion.longitud(); ++i) {
         poblacion.obtenerRef(i).actualizar(dt, comidasActivas, poblacion);
     }
     
-    // Eliminar las comidas ya consumidas. Se recorre de atrás hacia adelante porque morir() usa
-    // "Swap and Pop": mueve el último elemento al hueco, y así no se salta ninguno.
+    // Eliminar comidas consumidas. Si provienen del POOL, se re-encolan (Ciclo Cerrado)
     for (int i = comidasActivas.longitud() - 1; i >= 0; --i) {
-        if (!comidasActivas.obtenerRef(i).isActiva()) {
+        Comida& c = comidasActivas.obtenerRef(i);
+        if (!c.isActiva()) {
+            if (c.getOrigen() == OrigenComida::Pool) {
+                Comida reciclada = c;
+                reciclada.setActiva(true);
+                colaComida.insertar(reciclada); // Vuelve al final de la cola correspondiente
+            }
             comidasActivas.morir(i);
         }
     }
@@ -415,5 +461,36 @@ Comida MotorGrafico::extraerComidaSegunEstacion()
     {
         return colaComida.extraer_sin_prioridad_alta();
     }
+}
+
+void MotorGrafico::inicializarPoolComida()
+{
+    colaComida.vaciar();
+    static int idPool = 1;
+
+    // P1 (Rara): 5 ítems, 50 HP
+    for (int i = 0; i < 5; ++i)
+        colaComida.insertar(Comida(idPool++, 1, 50, 0, 0, OrigenComida::Pool));
+
+    // P2 (Media): 10 ítems, 30 HP
+    for (int i = 0; i < 10; ++i)
+        colaComida.insertar(Comida(idPool++, 2, 30, 0, 0, OrigenComida::Pool));
+
+    // P3 (Común): 15 ítems, 15 HP
+    for (int i = 0; i < 15; ++i)
+        colaComida.insertar(Comida(idPool++, 3, 15, 0, 0, OrigenComida::Pool));
+}
+
+float MotorGrafico::calcularIntervaloComida(const std::string& nombreEstacion)
+{
+    float base = 2.0f;
+    if (nombreEstacion == "Primavera") base = 1.2f;
+    else if (nombreEstacion == "Verano") base = 2.0f;
+    else if (nombreEstacion == "Otono") base = 3.5f;
+    else if (nombreEstacion == "Invierno") base = 5.5f;
+
+    // Frecuencia con ligera variación aleatoria (jitter entre 0.7x y 1.3x)
+    float factor = 0.7f + 0.6f * (static_cast<float>(std::rand()) / RAND_MAX);
+    return base * factor;
 }
 

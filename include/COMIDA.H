@@ -10,6 +10,8 @@
 #ifndef COMIDA_H
 #define COMIDA_H
 
+enum class OrigenComida { Pool, Clic, Cadaver };
+
 class Comida
 {
 private:
@@ -18,12 +20,16 @@ private:
     int puntos_de_vida;
     float x, y;
     bool activa;
+    OrigenComida origen;
 
 public:
-    Comida() : id(0), prioridad(3), puntos_de_vida(20), x(0.0f), y(0.0f), activa(true) {}
+    Comida() 
+        : id(0), prioridad(3), puntos_de_vida(15), x(0.0f), y(0.0f), 
+          activa(true), origen(OrigenComida::Pool) {}
 
-    Comida(int _id, int _prioridad, int _puntos_de_vida, float _x = 0.0f, float _y = 0.0f)
-        : id(_id), prioridad(_prioridad), puntos_de_vida(_puntos_de_vida), x(_x), y(_y), activa(true) {}
+    Comida(int _id, int _prioridad, int _puntos_de_vida, float _x = 0.0f, float _y = 0.0f, OrigenComida _origen = OrigenComida::Pool)
+        : id(_id), prioridad(_prioridad), puntos_de_vida(_puntos_de_vida), 
+          x(_x), y(_y), activa(true), origen(_origen) {}
 
     int getId() const { return id; }
     int getPrioridad() const { return prioridad; }
@@ -31,10 +37,12 @@ public:
     float getX() const { return x; }
     float getY() const { return y; }
     bool isActiva() const { return activa; }
+    OrigenComida getOrigen() const { return origen; }
 
     void setId(int _id) { id = _id; }
     void setPosicion(float _x, float _y) { x = _x; y = _y; }
     void setActiva(bool a) { activa = a; }
+    void setOrigen(OrigenComida o) { origen = o; }
 
     bool setPrioridad(int _prioridad) {
         if (_prioridad >= 1 && _prioridad <= 3) {

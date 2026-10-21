@@ -10,10 +10,12 @@ PantallaSimulacion::PantallaSimulacion(Aplicacion& app)
       etPausa_(app.recursos(), "PAUSA", 32, sf::Vector2f(Config::ANCHO_MUNDO / 2.0f, 40.0f),
                Etiqueta::Alineacion::Centro)
 {
-    // Aplicamos lo que el usuario eligió en Opciones y arrancamos con el Escenario 1.
+    // Cargar ajustes del menú de Opciones
     motor_.setAgentesCompetencia(app.ajustes().agentesCompetencia);
     motor_.setDuracionEstacion(app.ajustes().duracionEstacion);
-    motor_.cargarEscenarioCompetencia();
+
+    // Arranca en simulación general pausada con bichitos aleatorios
+    motor_.cargarSimulacionGeneral();
 }
 
 void PantallaSimulacion::procesarEvento(const sf::Event& evento)
