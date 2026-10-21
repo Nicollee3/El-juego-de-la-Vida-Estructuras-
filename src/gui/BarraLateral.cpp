@@ -31,7 +31,7 @@ BarraLateral::BarraLateral(GestorRecursos& recursos, MotorGrafico& motor, std::f
       lineaArreglo_(recursos, "", 16, sf::Vector2f(X0 + MARGEN, 120)),
       etVelocidad_(recursos, "", 16, sf::Vector2f(CX, 252), Etiqueta::Alineacion::Centro),
       etBichitos_(recursos, "Bichitos", 16, sf::Vector2f(CX, 456), Etiqueta::Alineacion::Centro),
-      etPrioridad_(recursos, "Prioridad de comida:", 16, sf::Vector2f(CX, 506), Etiqueta::Alineacion::Centro),
+      etPrioridad_(recursos, "Tamaño de comida:", 16, sf::Vector2f(CX, 506), Etiqueta::Alineacion::Centro),
       etAyuda_(recursos, "Espacio=pausa Esc=menú", 16, sf::Vector2f(CX, 604), Etiqueta::Alineacion::Centro),
       indiceVelocidad_(1) // empieza en 1x
 {
@@ -57,7 +57,7 @@ BarraLateral::BarraLateral(GestorRecursos& recursos, MotorGrafico& motor, std::f
     const float xs[3] = {CX - 80.0f, CX, CX + 80.0f};
     for (int i = 0; i < 3; ++i)
     {
-        btnPrioridad_[i] = crearBoton(std::to_string(i + 1), sf::Vector2f(xs[i], 552),
+        btnPrioridad_[i] = crearBoton(std::to_string(3 - i), sf::Vector2f(xs[i], 552),
                                       [this, i] { motor_.setPrioridadComida(i + 1); },
                                       "ui/boton_mini", mini);
     }
