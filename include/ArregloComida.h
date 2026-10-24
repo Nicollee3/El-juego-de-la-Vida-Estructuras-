@@ -1,179 +1,112 @@
 /*
- * @file ArregloComida.h
- * @brief Arreglo dinámico de Comida que crece y se encoge, con generación por ruleta de probabilidades.
- * @details Cada vez que se genera comida se "gira una ruleta" de 100 casillas (tirada de 0 a 99):
- *              0  a 69  -> comida NORMAL   (70%)  prioridad 3,  15 puntos de vida
- *              70 a 89  -> comida MEDIANA  (20%)  prioridad 2,  30 puntos de vida
- *              90 a 99  -> comida ESPECIAL (10%)  prioridad 1,  60 puntos de vida
- *          El arreglo crece multiplicando su tamaño por la razón áurea cuando se llena,
- *          y se encoge cuando queda muy vacío (nunca baja de 10 casillas).
- *              agregar / generar   O(1) amortizado
- *              obtener             O(1)
- *              eliminar(i)         O(n)  (corre los elementos para no dejar huecos y mantener el orden)
+ * @file AdministradorComidaFijo.h
+ * @brief Administrador de comida con tamaño fijo, ruleta de probabilidades y reciclaje O(1).
  * @author Karoll Ramírez
  * @date Octubre 2026
  */
- 
-#ifndef ARREGLO_COMIDA_H
-#define ARREGLO_COMIDA_H
- 
+
+#ifndef ADMINISTRADOR_COMIDA_FIJO_H
+#define ADMINISTRADOR_COMIDA_FIJO_H
+
 #include <cstdlib>
 #include "Comida.h"
- 
-class ArregloComida
+#include "ColaCircularIndices.h" // La cola circular que hicimos antes
+#include "TablaHashComidas.h"    // Tu tabla hash estática que hicimos antes
+
+class AdministradorComidaFijo
 {
+private:
+    Comida *arregloComida;           // Arreglo estático de tamaño fijo
+    int capacidadMax;                // Tamaño fijo máximo del mapa
+    ColaCircularIndices colaLibres;  // Cola circular de índices disponibles O(1)
+    TablaHashComidas tablaHash;      // Diccionario ID -> Índice en O(1)
+    int siguienteId;
+
 public:
-    // Límites de la ruleta (tirada de 0 a 99)
-    static const int LIMITE_NORMAL = 70;  // tiradas 0..69  -> 70%
-    static const int LIMITE_MEDIANA = 90; // tiradas 70..89 -> 20%  (90..99 -> 10% especial)
- 
-    /*
-     * @brief Construye un arreglo de comida vacío con capacidad inicial de 10.
-     */
-    ArregloComida()
+    // Límites de la ruleta (0 a 99)
+    static const int LIMITE_NORMAL = 70;  // 70% normal (prio 3, 15 hp)
+    static const int LIMITE_MEDIANA = 90; // 20% mediana (prio 2, 30 hp)
+                                      // 10% especial (prio 1, 60 hp)
+
+    AdministradorComidaFijo(int capMax = 300) 
+        : capacidadMax(capMax), colaLibres(capMax), tablaHash(503), siguienteId(1)
     {
-        N = 0;
-        tamano = 10;
-        siguienteId = 1;
-        datos = new Comida[tamano];
+        // Reservamos memoria una sola vez (Tamaño Fijo Estático)
+        arregloComida = new Comida[capacidadMax];
     }
- 
-    /*
-     * @brief Destructor: libera la memoria del arreglo.
-     */
-    ~ArregloComida()
+
+    ~AdministradorComidaFijo()
     {
-        delete[] datos;
+        delete[] arregloComida;
     }
- 
-    ArregloComida(const ArregloComida &) = delete;
-    ArregloComida &operator=(const ArregloComida &) = delete;
- 
-    /*
-     * @brief Traduce una tirada de la ruleta (0 a 99) en la prioridad de la comida.
-     * @return 3 (normal, 70%), 2 (mediana, 20%) o 1 (especial, 10%).
-     */
+
+    // Traduce la ruleta (Conservamos tu lógica exacta)
     static int prioridadPorTirada(int tirada)
     {
-        if (tirada < LIMITE_NORMAL)
-            return 3;
-        if (tirada < LIMITE_MEDIANA)
-            return 2;
+        if (tirada < LIMITE_NORMAL) return 3;
+        if (tirada < LIMITE_MEDIANA) return 2;
         return 1;
     }
- 
-    /*
-     * @brief Puntos de vida que da cada tipo de comida según su prioridad.
-     */
+
     static int puntosPorPrioridad(int prioridad)
     {
-        if (prioridad == 1)
-            return 60;
-        if (prioridad == 2)
-            return 30;
+        if (prioridad == 1) return 60;
+        if (prioridad == 2) return 30;
         return 15;
     }
- 
-    /*
-     * @brief Gira la ruleta, crea una comida del tipo que salió y la inserta en el arreglo.
-     * @param x, y Posición donde aparece la comida.
-     * @param origen De dónde viene la comida (Pool por defecto).
-     * @return Copia de la comida que se insertó.
-     */
-    Comida generar(float x, float y, OrigenComida origen = OrigenComida::Pool)
+
+    // GENERAR COMIDA POR PROBABILIDAD (Todo en O(1))
+    bool generar(float x, float y, OrigenComida origen = OrigenComida::Pool)
     {
         return generarConTirada(std::rand() % 100, x, y, origen);
     }
- 
-    /*
-     * @brief Igual que generar(), pero con la tirada ya decidida (sirve para hacer pruebas exactas).
-     * @param tirada Número de 0 a 99.
-     */
-    Comida generarConTirada(int tirada, float x, float y, OrigenComida origen = OrigenComida::Pool)
+
+    bool generarConTirada(int tirada, float x, float y, OrigenComida origen)
     {
+        // 1. Preguntamos a la cola circular si hay un índice libre (O(1))
+        if (colaLibres.estaVacia())
+        {
+            return false; // El mapa está lleno de comida, no se puede insertar más
+        }
+
+        int indiceLibre = colaLibres.dequeue(); // O(1)
+
+        // 2. Creamos la comida usando tu ruleta
         int prioridad = prioridadPorTirada(tirada);
-        Comida c(siguienteId, prioridad, puntosPorPrioridad(prioridad), x, y, origen);
+        int vida = puntosPorPrioridad(prioridad);
+
+        // Configuramos la comida en la ranura fija del arreglo
+        arregloComida[indiceLibre] = Comida(siguienteId, prioridad, vida, x, y, origen);
+        
+        // 3. Registramos en la Tabla Hash en O(1) promedio
+        tablaHash.insertar(siguienteId, indiceLibre);
+
         siguienteId++;
-        agregar(c);
-        return c;
-    }
- 
-    /*
-     * @brief Agrega una comida al final del arreglo. Si está lleno, crece con la razón áurea.
-     */
-    void agregar(const Comida &c)
-    {
-        if (N == tamano)
-            cambiarTamano((int)(tamano * aureo));
-        datos[N] = c;
-        N++;
-    }
- 
-    /*
-     * @brief Acceso a la comida de la posición i.
-     * @return Puntero a la comida (se puede modificar), o nullptr si i es inválido.
-     * @warning El puntero deja de ser válido si luego agregas o eliminas (el arreglo puede moverse en memoria).
-     */
-    Comida *obtener(int i)
-    {
-        if (i < 0 || i >= N)
-            return nullptr;
-        return &datos[i];
-    }
- 
-    const Comida *obtener(int i) const
-    {
-        if (i < 0 || i >= N)
-            return nullptr;
-        return &datos[i];
-    }
- 
-    /*
-     * @brief Elimina la comida de la posición i, corriendo las siguientes una casilla a la izquierda.
-     * @details Si el arreglo queda muy vacío, se encoge.
-     * @return false si el índice es inválido.
-     */
-    bool eliminar(int i)
-    {
-        if (i < 0 || i >= N)
-            return false;
-        for (int k = i; k < N - 1; k++)
-            datos[k] = datos[k + 1];
-        N--;
- 
-        if (N * aureo * aureo < tamano && tamano > 10)
-            cambiarTamano((int)(N * aureo));
         return true;
     }
- 
-    int longitud() const { return N; }
-    int capacidad() const { return tamano; }
-    bool esvacio() const { return N == 0; }
- 
-private:
-    Comida *datos;
-    int N;
-    int tamano;
-    int siguienteId; // Cada comida generada recibe un id nuevo
-    double aureo = 1.618;
- 
-    /*
-     * @brief Cambia la capacidad del arreglo (mínimo 10, y siempre mayor que la cantidad de elementos).
-     */
-    void cambiarTamano(int ntamano)
+
+    // ELIMINAR CUANDO SE LA COMEN (En O(1) estricto, sin corrimientos)
+    bool consumirComidaPorId(int idComida)
     {
-        if (ntamano < 10)
-            ntamano = 10;
-        if (ntamano <= N)
-            ntamano = N + 1;
-        Comida *ndatos = new Comida[ntamano];
-        for (int i = 0; i < N; i++)
-            ndatos[i] = datos[i];
-        delete[] datos;
-        datos = ndatos;
-        tamano = ntamano;
+        // 1. Buscamos el índice en la tabla hash en O(1)
+        int indice = tablaHash.buscarIndice(idComida);
+        if (indice == -1) return false; // No existe
+
+        // 2. Desactivamos la comida
+        arregloComida[indice].setActiva(false);
+
+        // 3. Borramos de la tabla hash en O(1)
+        tablaHash.eliminar(idComida);
+
+        // 4. Reciclamos el índice devolviéndolo a la cola circular en O(1)
+        colaLibres.enqueue(indice);
+
+        return true;
     }
+
+    // Método para dibujar en SFML (recorre el arreglo fijo de manera ultra rápida)
+    const Comida* getArregloComida() const { return arregloComida; }
+    int getCapacidadMax() const { return capacidadMax; }
 };
- 
+
 #endif
- 
