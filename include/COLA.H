@@ -1,7 +1,9 @@
+
 /*
  * @file Cola.h
- * @brief Implementación de una Cola.
+ * @brief Implementación de una Cola de Bichitos con lista enlazada.
  * @details Sigue el principio FIFO.
+ *          Mantiene punteros a la cabeza y al último, por eso insertar y eliminar cuestan O(1).
  * @author Karoll Ramírez
  * @date Octubre 2026
  */
@@ -9,78 +11,83 @@
 #ifndef COLA_H
 #define COLA_H
 
-#include <iostream>
-#include "Comida.h"
+#include "Bichito.h"
 
-/*
- * @class NodoLista
- * @brief Representa un nodo individual dentro de la estructura de la Cola.
- * @details Almacena un objeto de tipo Comida y un puntero hacia el siguiente nodo de la secuencia.
- */
-class NodoLista
-{
-public:
-
-    Comida dato;
-    NodoLista *sig;
-    /*
-     * @brief Construye un nuevo NodoLista con un objeto Comida específico.
-     * @param _dato Objeto Comida que se asignará al nodo.
-     */
-
-    NodoLista(Comida _dato)
-    {
-        dato = _dato;
-        sig = NULL;
-    }
-};
 /*
  * @class Cola
- * @brief Estructura de datos lineal de tipo cola para elementos Comida.
+ * @brief Estructura de datos lineal de tipo cola para elementos Bichito.
  * @details Permite la inserción de elementos por el final y la extracción por la cabeza.
  */
 class Cola
 {
 private:
+    /*
+     * @struct NodoLista
+     * @brief Nodo individual de la Cola. Es privado: nadie fuera de la Cola lo necesita.
+     */
+    struct NodoLista
+    {
+        Bichito dato;
+        NodoLista *sig;
+        /*
+         * @brief Construye un nodo con una copia del bichito.
+         */
+        NodoLista(const Bichito &_dato) : dato(_dato), sig(nullptr) {}
+    };
+
     NodoLista *cabeza;
     NodoLista *ultimo;
+    int N;
 
 public:
     /*
      * @brief Construye una nueva cola vacía.
-     * @details Inicializa los punteros cabeza y ultimo.
      */
     Cola()
     {
-        cabeza = NULL;
-        ultimo = NULL;
+        cabeza = nullptr;
+        ultimo = nullptr;
+        N = 0;
     }
+
     /*
-     * @brief Destructor de la Cola.
-     * @details Libera memoria.
+     * @brief Destructor de la Cola. Libera todos los nodos.
      */
     ~Cola()
     {
-        while (!esvacia())
+        while (eliminar_primero())
         {
-            eliminar_primero();
         }
     }
+
+    /*
+     * @brief Se prohíbe copiar la cola: dos colas compartiendo nodos liberarían la misma memoria dos veces.
+     */
+    Cola(const Cola &) = delete;
+    Cola &operator=(const Cola &) = delete;
+
     /*
      * @brief Verifica si la cola se encuentra vacía.
-     * @return true si no hay elementos en la cola (cabeza es null)
-     * @return false si la cola contiene al menos un elemento.
+     * @return true si no hay elementos, false si hay al menos uno.
      */
     bool esvacia() const
     {
-        return cabeza == NULL;
+        return cabeza == nullptr;
     }
+
     /*
-     * @brief Inserta un nuevo elemento de comida al final de la cola.
-     * @details Crea un nuevo nodo y actualiza los punteros de la cola 
-     * @param d Objeto Comida que se desea encolar.
+     * @brief Cantidad de bichitos que hay en la cola. O(1).
      */
-    void insertar_al_ultimo(Comida d)
+    int longitud() const
+    {
+        return N;
+    }
+
+    /*
+     * @brief Inserta un bichito al final de la cola. O(1).
+     * @param d Bichito que se desea encolar (se guarda una copia).
+     */
+    void insertar_al_ultimo(const Bichito &d)
     {
         NodoLista *nuevo = new NodoLista(d);
 
@@ -94,32 +101,61 @@ public:
             ultimo->sig = nuevo;
             ultimo = nuevo;
         }
+        N++;
     }
+
     /*
-     * @brief Elimina y retorna el primer elemento de la cola.
-     * @details Extrae el elemento ubicado en la cabeza, actualiza los punteros y libera la memoria del nodo que fue eliminado.
-     * @return Comida El objeto comida extraído, o un objeto centinela Comida(-1, -1, -1) si la cola está vacía.
+     * @brief Consulta el primer bichito SIN sacarlo de la cola. O(1).
+     * @param salida Aquí se guarda una copia del primer bichito.
+     * @return false si la cola estaba vacía (y salida no se toca).
      */
-    Comida eliminar_primero()
+    bool ver_primero(Bichito &salida) const
     {
         if (esvacia())
-        {
-            std::cout << "La cola esta vacia." << std::endl;
-            return Comida(-1, -1, -1);
-        }
+            return false;
+        salida = cabeza->dato;
+        return true;
+    }
 
-        Comida d = cabeza->dato;
+    /*
+     * @brief Elimina el primer bichito y lo entrega en salida. O(1).
+     * @param salida Aquí se guarda el bichito extraído.
+     * @return true si se eliminó algo, false si la cola estaba vacía.
+     */
+    bool eliminar_primero(Bichito &salida)
+    {
+        if (esvacia())
+            return false;
+
         NodoLista *aux = cabeza;
+        salida = aux->dato;
 
         cabeza = cabeza->sig;
-
-        if (esvacia())
-        {
-            ultimo = NULL;
-        }
+        if (cabeza == nullptr)
+            ultimo = nullptr;
 
         delete aux;
-        return d;
+        N--;
+        return true;
+    }
+
+    /*
+     * @brief Elimina el primer bichito sin devolverlo (útil para vaciar la cola).
+     * @return true si se eliminó algo, false si estaba vacía.
+     */
+    bool eliminar_primero()
+    {
+        if (esvacia())
+            return false;
+
+        NodoLista *aux = cabeza;
+        cabeza = cabeza->sig;
+        if (cabeza == nullptr)
+            ultimo = nullptr;
+
+        delete aux;
+        N--;
+        return true;
     }
 };
 

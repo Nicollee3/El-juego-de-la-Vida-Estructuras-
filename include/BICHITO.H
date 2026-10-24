@@ -2,6 +2,7 @@
  * @file Bichito.h
  * @brief Representa a cada bichito dentro del juego de la vida.
  * @details Tiene atributos privados de identificación y de cuánta vida tiene. Cuenta con setters y getters con validaciones.
+ *          Versión SIN comida y SIN pila: no depende de Comida.h ni de PilaDinamica.
  * @author Karoll Ramírez
  * @OCTUBRE 2026
  */
@@ -10,17 +11,20 @@
 #define BICHITO_H
 
 #include <cmath>
-#include <Comida.h>
 
-template <typename T> class PilaDinamica; // plantilla: se usa como PilaDinamica<Bichito> y PilaDinamica<Comida>
 /*
  * @enum EstadoBichito
  * @brief Define los posibles estados de comportamiento de un bichito en la simulación.
  */
-enum class EstadoBichito { BuscandoComida, BuscandoPareja, DePaseo };
+enum class EstadoBichito
+{
+    BuscandoComida,
+    BuscandoPareja,
+    DePaseo
+};
 /*
  * @class Bichito
- * @brief Modela una entidad autónoma (bichito) con ciclos de vida, movimiento y reproducción.
+ * @brief Modela una entidad autónoma (bichito) con ciclos de vida y movimiento.
  */
 class Bichito
 {
@@ -36,31 +40,17 @@ private:
     float cooldownReproduccion;
     bool siguiendoComida;
 
-    // Declaración de métodos privados (sus cuerpos se mueven al .cpp)
+    // Declaración de métodos privados (sus cuerpos están en el .cpp)
+    /*
+     * @brief Decide el estado del bichito según su vida y su cooldown.
+     */
     void evaluarEstado();
-    /*
-     * @brief Busca la comida más cercana dentro de la pila de comida disponible.
-     * @param comidas PilaDinamica de objetos Comida presentes en el entorno.
-     */
-    void buscarComida(PilaDinamica<Comida>& comidas);
-    /*
-     * @brief Gestiona la búsqueda y aproximación hacia un compañero compatible para la reproducción.
-     * @param poblacion Referencia a la estructura que almacena la población actual de bichitos.
-     * @param dt Incremento de tiempo (delta time) transcurrido desde el último fotograma.
-     */
-    void buscarPareja(PilaDinamica<Bichito>& poblacion, float dt);
-    /*
-     * @brief Ejecuta la lógica de reproducción con una pareja seleccionada.
-     * @param pareja Referencia al bichito con el cual se va a reproducir.
-     * @param poblacion Referencia a la población para registrar al nuevo descendiente.
-     */
-    void reproducirseCon(Bichito& pareja, PilaDinamica<Bichito>& poblacion);
     /*
      * @brief Controla el movimiento de patrullaje o paseo cuando no hay estímulos cercanos.
      */
     void pasear();
     /*
-     * @brief Genera un x,y aleatorio para pasear() 
+     * @brief Genera un x,y aleatorio para pasear()
      */
     void destinoAleatorio();
 
@@ -89,8 +79,16 @@ public:
 
     void setId(int _id) { id = _id; }
     bool setVida(float _vida);
-    void setPosicion(float _x, float _y) { x = _x; y = _y; }
-    void setTarget(float _tx, float _ty) { targetX = _tx; targetY = _ty; }
+    void setPosicion(float _x, float _y)
+    {
+        x = _x;
+        y = _y;
+    }
+    void setTarget(float _tx, float _ty)
+    {
+        targetX = _tx;
+        targetY = _ty;
+    }
     void setVelocidad(float _v) { velocidad = _v; }
     void setEstado(EstadoBichito _e) { estado = _e; }
     void setTiempoCercaPareja(float _t) { tiempoCercaPareja = _t; }
@@ -98,21 +96,19 @@ public:
     void setCooldownReproduccion(float _cd) { cooldownReproduccion = _cd; }
     void setSiguiendoComida(bool _sc) { siguiendoComida = _sc; }
 
-    // Declaración de métodos con lógica pesada (sus cuerpos se mueven al .cpp)
     /*
      * @brief Desplaza al bichito de manera fluida hacia su posición objetivo (targetX, targetY).
      * @param dt Incremento de tiempo (delta time) transcurrido en el fotograma.
      */
     void moverHaciaObjetivo(float dt);
     /*
-     * @brief Actualiza la lógica del bichito (comportamiento, movimiento, vida) en cada ciclo del juego.
+     * @brief Actualiza la lógica del bichito (estado, movimiento) en cada ciclo del juego.
+     * @details La vida NO baja aquí: el desgaste por segundo lo aplica el juego con cambiarVida(-1).
      * @param dt Incremento de tiempo transcurrido.
-     * @param comidas PilaDinamica con las fuentes de comida disponibles en la simulación.
-     * @param poblacion Referencia a la estructura dinámica que almacena la población general.
      */
-    void actualizar(float dt, PilaDinamica<Comida>& comidas, PilaDinamica<Bichito>& poblacion);
+    void actualizar(float dt);
     /*
-     * @brief Incrementa o decrementa la vida actual del bichito de forma segura.
+     * @brief Incrementa o decrementa la vida actual del bichito de forma segura (siempre queda entre 0 y 100).
      * @param delta Cantidad de vida a sumar (positiva) o restar (negativa).
      */
     void cambiarVida(float delta);

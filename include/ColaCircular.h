@@ -1,4 +1,4 @@
-/*
+////////////////AHORA ESTO ES PARA COMIDAAAAAAAAAAAAAA
  * @file ColaCircular.h
  * @brief Implementación de una Cola Circular de tamaño fijo para gestionar las Estaciones del Año.
  * @details Utiliza un arreglo estático de 4 elementos y el operador de residuo (%) para 
