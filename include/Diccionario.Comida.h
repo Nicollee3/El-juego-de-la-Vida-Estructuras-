@@ -1,6 +1,6 @@
 /**
  * @file TablaHashComidas.h
- * @brief Tabla hash estática para mapear coordenadas (o IDs) de comida a índices fijos.
+ * @brief Tabla hash estática optimizada para mapear IDs de comida a índices de arreglo con Tombstones y mezcla de bits.
  * @author Karoll Ramírez
  * @date Octubre 2026
  */
@@ -13,29 +13,37 @@
 class TablaHashComidas
 {
 private:
+    enum Estado { LIBRE, OCUPADO, BORRADO };
+
     struct Entrada
     {
         int id;
         int indiceArreglo; // El índice en el arreglo fijo de objetos Comida
-        bool ocupado;
+        Estado estado;
 
-        Entrada() : id(-1), indiceArreglo(-1), ocupado(false) {}
+        Entrada() : id(-1), indiceArreglo(-1), estado(LIBRE) {}
     };
 
     Entrada *tabla;
     int capacidad;
+    int elementosActivos;
 
-    // Función hash basada en el id de la comida
+    // Función hash con mezcla de bits para evitar agrupamientos por IDs secuenciales
     int funcionHash(int id, int cap) const
     {
-        return id % cap;
+        unsigned int hash = static_cast<unsigned int>(id);
+        hash = ((hash >> 16) ^ hash) * 0x45d9f3b;
+        hash = ((hash >> 16) ^ hash) * 0x45d9f3b;
+        hash = (hash >> 16) ^ hash;
+        return hash % cap;
     }
 
 public:
-    // Constructor de tamaño fijo (ej. 503, un número primo mayor que la capacidad máxima de comida)
+    // Constructor de tamaño fijo (ej. 503, un número primo recomendado)
     TablaHashComidas(int cap = 503)
     {
         capacidad = cap;
+        elementosActivos = 0;
         tabla = new Entrada[capacidad];
     }
 
@@ -44,6 +52,10 @@ public:
         delete[] tabla;
     }
 
+    // Prevenir copias superficiales para proteger la memoria dinámica
+    TablaHashComidas(const TablaHashComidas&) = delete;
+    TablaHashComidas& operator=(const TablaHashComidas&) = delete;
+
     /**
      * @brief Inserta o actualiza la relación ID -> Índice del arreglo en O(1) promedio.
      */
@@ -51,17 +63,38 @@ public:
     {
         int indice = funcionHash(id, capacidad);
         int inicio = indice;
+        int primerTombstone = -1;
 
-        // Sondeo lineal en caso de colisión
-        while (tabla[indice].ocupado && tabla[indice].id != id)
+        while (tabla[indice].estado != LIBRE)
         {
+            // Si el ID ya existe, actualizamos su índice de arreglo y salimos
+            if (tabla[indice].estado == OCUPADO && tabla[indice].id == id)
+            {
+                tabla[indice].indiceArreglo = indiceArreglo;
+                return;
+            }
+
+            // Guardamos el primer espacio BORRADO para reutilizarlo inteligentemente
+            if (tabla[indice].estado == BORRADO && primerTombstone == -1)
+            {
+                primerTombstone = indice;
+            }
+
             indice = (indice + 1) % capacidad;
-            if (indice == inicio) break; // Tabla llena (si se dimensionó bien, no pasa)
+            if (indice == inicio) break; // Tabla llena
         }
 
-        tabla[indice].id = id;
-        tabla[indice].indiceArreglo = indiceArreglo;
-        tabla[indice].ocupado = true;
+        // Elegimos dónde insertar: si hay un tombstone lo reciclamos, sino usamos el índice libre
+        int indiceInsercion = (primerTombstone != -1) ? primerTombstone : indice;
+
+        if (tabla[indiceInsercion].estado != OCUPADO)
+        {
+            elementosActivos++;
+        }
+
+        tabla[indiceInsercion].id = id;
+        tabla[indiceInsercion].indiceArreglo = indiceArreglo;
+        tabla[indiceInsercion].estado = OCUPADO;
     }
 
     /**
@@ -72,9 +105,9 @@ public:
         int indice = funcionHash(id, capacidad);
         int inicio = indice;
 
-        while (tabla[indice].ocupado)
+        while (tabla[indice].estado != LIBRE)
         {
-            if (tabla[indice].id == id)
+            if (tabla[indice].estado == OCUPADO && tabla[indice].id == id)
             {
                 return tabla[indice].indiceArreglo;
             }
@@ -86,20 +119,21 @@ public:
     }
 
     /**
-     * @brief Elimina la entrada de la tabla hash cuando la comida es consumida.
+     * @brief Elimina la entrada marcándola como BORRADO (Tombstone) para preservar las cadenas de colisión.
      */
     void eliminar(int id)
     {
         int indice = funcionHash(id, capacidad);
         int inicio = indice;
 
-        while (tabla[indice].ocupado)
+        while (tabla[indice].estado != LIBRE)
         {
-            if (tabla[indice].id == id)
+            if (tabla[indice].estado == OCUPADO && tabla[indice].id == id)
             {
-                tabla[indice].ocupado = false;
+                tabla[indice].estado = BORRADO;
                 tabla[indice].id = -1;
                 tabla[indice].indiceArreglo = -1;
+                elementosActivos--;
                 return;
             }
             indice = (indice + 1) % capacidad;
@@ -108,6 +142,7 @@ public:
     }
 
     int getCapacidad() const { return capacidad; }
+    int getElementosActivos() const { return elementosActivos; }
 };
 
 #endif
