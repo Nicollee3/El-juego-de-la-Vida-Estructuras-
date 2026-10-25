@@ -1,0 +1,53 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Configure ElJuegoDeLaVida",
+            "type": "process",
+            "command": "cmake",
+            "args": [
+                "--preset",
+                "default"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build ElJuegoDeLaVida",
+            "type": "process",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "--preset",
+                "default"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "Configure ElJuegoDeLaVida",
+            "dependsOrder": "sequence",
+            "problemMatcher": "$gcc",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Build and Run ElJuegoDeLaVida",
+            "type": "process",
+            "command": "${workspaceFolder}\\out\\build\\ElJuegoDeLaVida.exe",
+            "args": [],
+            "options": {
+                "cwd": "${workspaceFolder}\\out\\build",
+                "env": {
+                    "PATH": "C:\\mingw64\\bin;C:\\msys64\\ucrt64\\bin;${env:PATH}"
+                }
+            },
+            "dependsOn": "Build ElJuegoDeLaVida",
+            "dependsOrder": "sequence",
+            "problemMatcher": []
+        }
+    ]
+}

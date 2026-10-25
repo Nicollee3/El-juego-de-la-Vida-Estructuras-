@@ -1,30 +1,38 @@
-# NO BORRAR
-# Este archivo se encarga de evitar que se suban archivos innecesarios al repositorio
+# Directorios de build y archivos generados por CMake
+/build/
+/out/
+/cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
 
-# Carpetas de compilación
-**/build/
-**/bin/
-**/out/
-
-# Archivos de entorno, llaves y variables secretas
-.env
-.env.local
-*.pem
-
-# Configuraciones del IDE
-.vscode/*
-!.vscode/c_cpp_properties.json
-.idea/
-*.user
-
-# Ejecutables y objetos binarios
-*.exe
+# archivos de C/C++ 
 *.o
 *.obj
-*.dll
+*.a
+*.lib
 *.so
-*.dylib
+*.dll
+*.exe
+*.pdb
+*.ilk
 
-# Archivos del Sistema Operativo
-.DS_Store
+# Presets de CMake locales
+CMakeUserPresets.json
+
+# Archivos de configuración de IDEs
+.vs/
+.idea/
+.vscode/.browse.VC.db*
+*.code-workspace
+
+# Archivos de sistema y metadatos
 Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs y archivos temporales
+*.log
+*.tmp
+*.bak

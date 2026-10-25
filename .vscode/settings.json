@@ -1,0 +1,7 @@
+{
+    "cmake.useCMakePresets": "always",
+    "cmake.defaultConfigurePreset": "default",
+    "cmake.defaultBuildPreset": "default",
+    "cmake.defaultLaunchTarget": "ElJuegoDeLaVida",
+    "cmake.configureOnOpen": true
+}
