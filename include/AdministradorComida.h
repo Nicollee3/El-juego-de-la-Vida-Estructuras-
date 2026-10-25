@@ -18,7 +18,7 @@ class AdministradorComida
 {
 private:
     ArregloDinamico<Comida> comidasActivas; // Arreglo dinámico de objetos Comida
-    TablaHashComidas tablaHash;             // El diccionario de Karoll (ID -> Índice del arreglo)
+    TablaHashComidas tablaHash;             
     int siguienteId;
 
 public:
