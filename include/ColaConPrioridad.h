@@ -7,8 +7,8 @@
  *          (el nivel 0 es el de mayor prioridad):
  *              0: vida <= 0   (muerto)
  *              1: vida <  7   (crítico)
- *              2: vida <  30  (hambriento)
- *              3: vida >= 30  (sano, hasta 100)
+ *              2: vida <  20  ( muy hambriento)
+ *              3: vida < 30  (hambriento)
  *          Dentro de un mismo nivel sale primero el que llegó primero (FIFO).
  *              insertar           O(1)
  *              eliminar_primero   O(1)  
@@ -52,7 +52,7 @@ public:
             return 0;
         if (vida < 7)
             return 1;
-        if (vida < 30)
+        if (vida < 20)
             return 2;
         return 3;
     }
