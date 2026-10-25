@@ -11,7 +11,7 @@
 #include <cstdlib>
 #include <string>
 #include "Comida.h"
-#include "ArregloBichitos.h"    // Contiene la plantilla ArregloDinamico<T>
+#include "ArregloDinamico.h"    // Contiene la plantilla ArregloDinamico<T>
 #include "Diccionario.Comida.h" 
 
 class AdministradorComida

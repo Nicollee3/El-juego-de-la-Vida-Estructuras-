@@ -39,7 +39,7 @@ namespace
 }
 
 // CAMBIO: ya no se crea la ventana aquí (ni setFramerateLimit): lo hace Aplicacion.
-MotorGrafico::MotorGrafico(PilaDinamica<Bichito>& _poblacion, sf::Vector2f _tamanoMundo)
+MotorGrafico::MotorGrafico(ArregloDinamico<Bichito>& _poblacion, sf::Vector2f _tamanoMundo)
     : tamanoMundo(_tamanoMundo),
     poblacion(_poblacion),
     bolsaComida{{1, 2, 2, 3, 3, 3, 3, 3, 3, 3}},

@@ -2,7 +2,7 @@
 #include <cstdlib>        
 #include <algorithm>      
 #include "Bichito.h"
-#include "PilaDinamica.h" 
+#include "ArregloDinamico.h"
 #include "gui/Config.h"
 
 // --- CONSTRUCTORES ---
@@ -68,7 +68,7 @@ void Bichito::evaluarEstado() {
     }
 }
 
-void Bichito::buscarComida(PilaDinamica<Comida>& comidas) {
+void Bichito::buscarComida(ArregloDinamico<Comida>& comidas) {
     int idxCercano = -1;
     float minDist = 999999.0f;
 
@@ -105,11 +105,11 @@ void Bichito::buscarComida(PilaDinamica<Comida>& comidas) {
     }
 }
 
-void Bichito::buscarPareja(PilaDinamica<Bichito>& poblacion, float dt) {
+void Bichito::buscarPareja(ArregloDinamico<Bichito>& poblacion, float dt) {
     int idxPareja = -1;
     float minDist = 999999.0f;
 
-    // Buscar al bichito disponible más cercano usando la PilaDinamica
+    // Buscar al bichito disponible más cercano en la población
     for (int j = 0; j < poblacion.longitud(); ++j) {
         Bichito& otro = poblacion.obtenerRef(j);
 
@@ -148,7 +148,7 @@ void Bichito::buscarPareja(PilaDinamica<Bichito>& poblacion, float dt) {
     }
 }
 
-void Bichito::reproducirseCon(Bichito& pareja, PilaDinamica<Bichito>& poblacion) {
+void Bichito::reproducirseCon(Bichito& pareja, ArregloDinamico<Bichito>& poblacion) {
     // 1. Calcular las coordenadas y crear la instancia del hijo
     float hijoX = (this->x + pareja.getX()) / 2.0f;
     float hijoY = (this->y + pareja.getY()) / 2.0f;
@@ -210,7 +210,8 @@ void Bichito::moverHaciaObjetivo(float dt) {
     }
 }
 
-void Bichito::actualizar(float dt, PilaDinamica<Comida>& comidas, PilaDinamica<Bichito>& poblacion) {
+void Bichito::actualizar(float dt, ArregloDinamico<Comida>& comidas,
+                         ArregloDinamico<Bichito>& poblacion) {
     evaluarEstado();
 
     switch (estado) {

@@ -2,8 +2,9 @@
 #define MOTOR_GRAFICO_H
 
 #include <array>
+#include <string>
 #include <SFML/Graphics.hpp>
-#include "PilaDinamica.h"
+#include "ArregloDinamico.h"
 #include "ColaCircular.h"
 
 class GestorRecursos; // declaración adelantada
@@ -16,8 +17,8 @@ private:
     // CAMBIO: ya no existe "sf::RenderWindow ventana". La ventana ahora es de la clase Aplicacion.
     // El motor solo necesita saber qué tan grande es el "mundo" donde viven los bichitos.
     sf::Vector2f tamanoMundo;
-    PilaDinamica<Bichito>& poblacion;
-    PilaDinamica<Comida> comidasActivas; // antes std::vector<Comida>
+    ArregloDinamico<Bichito>& poblacion;
+    ArregloDinamico<Comida> comidasActivas;
     ColaCircular estaciones;
     std::array<int, 10> bolsaComida;
     int indiceBolsaComida;
@@ -47,7 +48,7 @@ private:
 
 public:
     // CAMBIO: recibe el tamaño del mundo en vez de crear la ventana.
-    MotorGrafico(PilaDinamica<Bichito>& _poblacion, sf::Vector2f _tamanoMundo);
+    MotorGrafico(ArregloDinamico<Bichito>& _poblacion, sf::Vector2f _tamanoMundo);
 
     // CAMBIO: desaparece ejecutar(); su trabajo se reparte en estos tres métodos
     // que llama PantallaSimulacion en cada frame.
@@ -74,8 +75,8 @@ public:
     void setAgentesCompetencia(int n) { if (n >= 1) agentesCompetencia = n; }
     void setDuracionEstacion(float segundos) { if (segundos > 0.0f) tiempoCambioEstacion = segundos; }
 
-    void agregarBichito(); // usa PilaDinamica::generar
-    void quitarBichito();  // usa PilaDinamica::borrar
+    void agregarBichito();
+    void quitarBichito();
 
     // ---------- NUEVO: información para mostrar ----------
     ModoSimulacion getModo() const { return modoActual; }

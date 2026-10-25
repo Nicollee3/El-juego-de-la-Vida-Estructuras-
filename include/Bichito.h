@@ -2,7 +2,7 @@
  * @file Bichito.h
  * @brief Representa a cada bichito dentro del juego de la vida.
  * @details Tiene atributos privados de identificación y de cuánta vida tiene. Cuenta con setters y getters con validaciones.
- *          Versión SIN comida y SIN pila: no depende de Comida.h ni de PilaDinamica.
+ *          La lógica de comida y población utiliza ArregloDinamico.
  * @author Karoll Ramírez
  * @OCTUBRE 2026
  */
@@ -11,6 +11,10 @@
 #define BICHITO_H
 
 #include <cmath>
+
+class Comida;
+template <typename T>
+class ArregloDinamico;
 
 /*
  * @enum EstadoBichito
@@ -53,6 +57,9 @@ private:
      * @brief Genera un x,y aleatorio para pasear()
      */
     void destinoAleatorio();
+    void buscarComida(ArregloDinamico<Comida>& comidas);
+    void buscarPareja(ArregloDinamico<Bichito>& poblacion, float dt);
+    void reproducirseCon(Bichito& pareja, ArregloDinamico<Bichito>& poblacion);
 
 public:
     /*
@@ -106,7 +113,8 @@ public:
      * @details La vida NO baja aquí: el desgaste por segundo lo aplica el juego con cambiarVida(-1).
      * @param dt Incremento de tiempo transcurrido.
      */
-    void actualizar(float dt);
+    void actualizar(float dt, ArregloDinamico<Comida>& comidas,
+                    ArregloDinamico<Bichito>& poblacion);
     /*
      * @brief Incrementa o decrementa la vida actual del bichito de forma segura (siempre queda entre 0 y 100).
      * @param delta Cantidad de vida a sumar (positiva) o restar (negativa).
