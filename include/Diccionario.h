@@ -1,6 +1,6 @@
 /**
  * @file TablaHashBichitos.h
- * @brief Tabla hash con sondeo lineal y Rehashing automático para mantener O(1).
+ * @brief Tabla hash dinámica con Rehashing y marcas de borrado (Tombstones).
  * @author Karoll Ramírez
  * @date Octubre 2026
  */
@@ -14,55 +14,83 @@
 class TablaHashBichitos
 {
 private:
+    enum Estado { LIBRE, OCUPADO, BORRADO };
+
     struct Entrada
     {
         int id;
         Bichito *bichito;
-        bool ocupado;
+        Estado estado;
 
-        Entrada() : id(-1), bichito(nullptr), ocupado(false) {}
+        Entrada() : id(-1), bichito(nullptr), estado(LIBRE) {}
     };
 
     Entrada *tabla;
     int capacidad;
-    int elementos;
+    int elementosActivos;
+    int tombstones; // Contador de espacios borrados para saber cuándo limpiar en el rehash
 
-    // Función hash básica basada en el operador módulo
+    // Función hash con mezcla de bits
     int funcionHash(int id, int cap) const
     {
-        return id % cap;
+        unsigned int hash = static_cast<unsigned int>(id);
+        hash = ((hash >> 16) ^ hash) * 0x45d9f3b;
+        hash = ((hash >> 16) ^ hash) * 0x45d9f3b;
+        hash = (hash >> 16) ^ hash;
+        return hash % cap;
     }
 
     /**
-     * @brief Redimensiona la tabla hash al doble de capacidad y reubica las entradas.
+     * @brief Redimensiona la tabla cuando el factor de carga supera el 70%.
      */
     void rehash()
     {
         int antiguaCapacidad = capacidad;
         Entrada *antiguaTabla = tabla;
 
-        // Duplicamos la capacidad (o usamos un primo mayor)
+        // Duplicamos capacidad (idealmente buscar un primo, pero * 2 + 1 funciona bien)
         capacidad = antiguaCapacidad * 2 + 1;
         tabla = new Entrada[capacidad];
-        elementos = 0;
+        elementosActivos = 0;
+        tombstones = 0;
 
-        // Reinsertamos todas las entradas que estaban ocupadas
+        // Reinsertamos solo los elementos realmente OCUPADOS (limpiando los tombstones)
         for (int i = 0; i < antiguaCapacidad; i++)
         {
-            if (antiguaTabla[i].ocupado)
+            if (antiguaTabla[i].estado == OCUPADO)
             {
-                insertar(antiguaTabla[i].id, antiguaTabla[i].bichito);
+                insertarInterno(antiguaTabla[i].id, antiguaTabla[i].bichito);
             }
         }
 
-        delete[] antiguaTabla; // Liberamos el arreglo viejo
+        delete[] antiguaTabla;
+    }
+
+    // Inserción interna auxiliar para el proceso de rehash (sin disparar otro rehash)
+    void insertarInterno(int id, Bichito *b)
+    {
+        int indice = funcionHash(id, capacidad);
+        while (tabla[indice].estado == OCUPADO)
+        {
+            if (tabla[indice].id == id) {
+                tabla[indice].bichito = b;
+                return;
+            }
+            indice = (indice + 1) % capacidad;
+        }
+
+        tabla[indice].id = id;
+        tabla[indice].bichito = b;
+        tabla[indice].estado = OCUPADO;
+        elementosActivos++;
     }
 
 public:
-    TablaHashBichitos(int cap = 101)
+    TablaHashBichitos(int cap = 1009)
     {
         capacidad = cap;
-        elementos = 0;
+        elementosActivos = 0;
+        tombstones = 0;
         tabla = new Entrada[capacidad];
     }
 
@@ -71,52 +99,75 @@ public:
         delete[] tabla;
     }
 
+    TablaHashBichitos(const TablaHashBichitos&) = delete;
+    TablaHashBichitos& operator=(const TablaHashBichitos&) = delete;
+
     /**
-     * @brief Inserta o actualiza la dirección en memoria del Bichito por su ID.
-     *        Aplica rehashing automático si el factor de carga supera 0.7.
+     * @brief Inserta o actualiza el bichito. Aplica rehash si pasa el 70% de ocupación.
      */
     void insertar(int id, Bichito *b)
     {
-        // Si la tabla supera el 70% de ocupación, redimensionamos antes de insertar
-        if ((float)(elementos + 1) / capacidad > 0.7f)
+        // Factor de carga basado en activos + tombstones para no saturar el sondeo
+        if ((float)(elementosActivos + tombstones + 1) / capacidad > 0.7f)
         {
             rehash();
         }
 
         int indice = funcionHash(id, capacidad);
+        int inicio = indice;
+        int primerTombstone = -1;
 
-        // Sondeo lineal en caso de colisión
-        while (tabla[indice].ocupado && tabla[indice].id != id)
+        while (tabla[indice].estado != LIBRE)
         {
+            if (tabla[indice].estado == OCUPADO && tabla[indice].id == id)
+            {
+                tabla[indice].bichito = b;
+                return;
+            }
+
+            if (tabla[indice].estado == BORRADO && primerTombstone == -1)
+            {
+                primerTombstone = indice;
+            }
+
             indice = (indice + 1) % capacidad;
+            if (indice == inicio) break;
         }
 
-        if (!tabla[indice].ocupado)
+        int indiceInsercion = (primerTombstone != -1) ? primerTombstone : indice;
+
+        if (tabla[indiceInsercion].estado == BORRADO)
         {
-            elementos++;
+            tombstones--;
         }
 
-        tabla[indice].id = id;
-        tabla[indice].bichito = b;
-        tabla[indice].ocupado = true;
+        if (tabla[indiceInsercion].estado != OCUPADO)
+        {
+            elementosActivos++;
+        }
+
+        tabla[indiceInsercion].id = id;
+        tabla[indiceInsercion].bichito = b;
+        tabla[indiceInsercion].estado = OCUPADO;
     }
 
     /**
-     * @brief Elimina la entrada del ID en la tabla hash cuando el bichito muere.
+     * @brief Elimina marcando como BORRADO (Tombstone) para no romper las cadenas de colisión.
      */
     void eliminar(int id)
     {
         int indice = funcionHash(id, capacidad);
         int inicio = indice;
 
-        while (tabla[indice].ocupado)
+        while (tabla[indice].estado != LIBRE)
         {
-            if (tabla[indice].id == id)
+            if (tabla[indice].estado == OCUPADO && tabla[indice].id == id)
             {
-                tabla[indice].ocupado = false;
-                tabla[indice].bichito = nullptr;
+                tabla[indice].estado = BORRADO;
                 tabla[indice].id = -1;
-                elementos--;
+                tabla[indice].bichito = nullptr;
+                elementosActivos--;
+                tombstones++;
                 return;
             }
             indice = (indice + 1) % capacidad;
@@ -125,32 +176,28 @@ public:
     }
 
     /**
-     * @brief Busca la referencia directa del bichito por su ID en O(1) promedio.
+     * @brief Busca el bichito por su ID en O(1) promedio.
      */
     Bichito *buscar(int id) const
     {
         int indice = funcionHash(id, capacidad);
         int inicio = indice;
 
-        while (tabla[indice].ocupado)
+        while (tabla[indice].estado != LIBRE)
         {
-            if (tabla[indice].id == id)
+            if (tabla[indice].estado == OCUPADO && tabla[indice].id == id)
             {
                 return tabla[indice].bichito;
             }
             indice = (indice + 1) % capacidad;
-
-            if (indice == inicio)
-            {
-                break;
-            }
+            if (indice == inicio) break;
         }
 
         return nullptr;
     }
 
     int getCapacidad() const { return capacidad; }
-    int getElementos() const { return elementos; }
+    int getElementos() const { return elementosActivos; }
 };
 
 #endif
