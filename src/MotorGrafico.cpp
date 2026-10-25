@@ -42,6 +42,8 @@ namespace
 MotorGrafico::MotorGrafico(PilaDinamica<Bichito>& _poblacion, sf::Vector2f _tamanoMundo)
     : tamanoMundo(_tamanoMundo),
     poblacion(_poblacion),
+    bolsaComida{{1, 2, 2, 3, 3, 3, 3, 3, 3, 3}},
+    indiceBolsaComida(0),
     tiempoCambioEstacion(10.0f),
     temporizadorEstacion(0.0f),
     temporizadorComida(0.0f),
@@ -52,6 +54,7 @@ MotorGrafico::MotorGrafico(PilaDinamica<Bichito>& _poblacion, sf::Vector2f _tama
     prioridadComida(1),
     agentesCompetencia(5)
 {
+    mezclarBolsaComida();
 }
 
 void MotorGrafico::setVelocidad(float v)
@@ -109,8 +112,7 @@ void MotorGrafico::cargarSimulacionGeneral()
         poblacion.morir(0);
     }
 
-    // Llenar el pool inicial en la cola
-    inicializarPoolComida();
+    mezclarBolsaComida();
 
     // Generar la cantidad de bichitos elegida en Opciones en posiciones aleatorias
     for (int i = 0; i < agentesCompetencia; ++i) {
@@ -347,28 +349,24 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
 {
     temporizadorComida += dt;
 
-    // Extraer del pool según el temporizador e intervalo con jitter
-    if (temporizadorComida >= intervaloComida && !colaComida.esvacia())
+    // Generar comida automática según la rareza indicada por la bolsa.
+    if (temporizadorComida >= intervaloComida)
     {
-        Comida c = extraerComidaSegunEstacion();
-        if (c.getId() != -1)
-        {
-            // Asignar posición aleatoria en el mapa justo al desencolar
-            float margen = 30.0f;
-            float minX = margen;
-            float maxX = Config::ANCHO_MUNDO - margen;
-            float minY = margen;
-            float maxY = Config::ALTO_MUNDO - margen;
+        const int prioridad = obtenerRarezaSiguiente();
+        const int puntosVida = prioridad == 1 ? 50 : (prioridad == 2 ? 30 : 15);
 
-            float rangoX = maxX - minX;
-            float rangoY = maxY - minY;
+        float margen = 30.0f;
+        float minX = margen;
+        float maxX = Config::ANCHO_MUNDO - margen;
+        float minY = margen;
+        float maxY = Config::ALTO_MUNDO - margen;
 
-            float rx = minX + (static_cast<float>(rand()) / RAND_MAX) * rangoX;
-            float ry = minY + (static_cast<float>(rand()) / RAND_MAX) * rangoY;
-            c.setPosicion(rx, ry);
+        float rangoX = maxX - minX;
+        float rangoY = maxY - minY;
 
-            comidasActivas.generar(c);
-        }
+        float rx = minX + (static_cast<float>(rand()) / RAND_MAX) * rangoX;
+        float ry = minY + (static_cast<float>(rand()) / RAND_MAX) * rangoY;
+        agregarComida(rx, ry, prioridad, puntosVida);
 
         // Recalcular intervalo para el próximo drop
         intervaloComida = calcularIntervaloComida(estaciones.obtener_actual().nombre);
@@ -380,17 +378,11 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
         poblacion.obtenerRef(i).actualizar(dt, comidasActivas, poblacion);
     }
     
-    // Eliminar comidas consumidas. Si provienen del POOL, se re-encolan (Ciclo Cerrado)
+    // La comida consumida se elimina del arreglo dinámico y no se recicla en la bolsa.
     for (int i = comidasActivas.longitud() - 1; i >= 0; --i) {
         Comida& c = comidasActivas.obtenerRef(i);
-        if (!c.isActiva()) {
-            if (c.getOrigen() == OrigenComida::Pool) {
-                Comida reciclada = c;
-                reciclada.setActiva(true);
-                colaComida.insertar(reciclada); // Vuelve al final de la cola correspondiente
-            }
+        if (!c.isActiva())
             comidasActivas.morir(i);
-        }
     }
 }
 
@@ -441,44 +433,33 @@ void MotorGrafico::dibujar(sf::RenderTarget& destino, GestorRecursos& recursos)
     }
 }
     
-    /*
- * @brief Extrae una comida de la cola procesando la restricción de estación activa.
- * @details Si la estación actual en la ColaCircular es Primavera o Verano, extrae
- *          usando 'extraer_segun_probabilidad()' (distribución entre las 3 prioridades).
- *          Si es Otoño e Invierno, utiliza 'extraer_sin_prioridad_alta()' para simular
- *          escasez omitiendo la comida de Prioridad 1.
- * @return Comida Objeto extraído de la cola correspondiente, o Comida(-1, -1, -1) si no hay disponibilidad.
- */
-Comida MotorGrafico::extraerComidaSegunEstacion()
+void MotorGrafico::mezclarBolsaComida()
 {
-    Estacion estacionActual = estaciones.obtener_actual();
-
-    if (estacionActual.nombre == "Primavera" || estacionActual.nombre == "Verano")
-    {
-        return colaComida.extraer_segun_probabilidad();
+    for (int i = static_cast<int>(bolsaComida.size()) - 1; i > 0; --i) {
+        const int indiceAleatorio = std::rand() % (i + 1);
+        std::swap(bolsaComida[i], bolsaComida[indiceAleatorio]);
     }
-    else
-    {
-        return colaComida.extraer_sin_prioridad_alta();
-    }
+    indiceBolsaComida = 0;
 }
 
-void MotorGrafico::inicializarPoolComida()
-{
-    colaComida.vaciar();
-    static int idPool = 1;
+int MotorGrafico::obtenerRarezaSiguiente() {
+    const std::string& nombreEstacion = estaciones.obtener_actual().nombre;
+    const bool excluirRara = (nombreEstacion == "Otono" || nombreEstacion == "Invierno");
 
-    // P1 (Rara): 5 ítems, 50 HP
-    for (int i = 0; i < 5; ++i)
-        colaComida.insertar(Comida(idPool++, 1, 50, 0, 0, OrigenComida::Pool));
+    while (true) {
+        if (indiceBolsaComida >= static_cast<int>(bolsaComida.size())) {
+            mezclarBolsaComida();
+        }
 
-    // P2 (Media): 10 ítems, 30 HP
-    for (int i = 0; i < 10; ++i)
-        colaComida.insertar(Comida(idPool++, 2, 30, 0, 0, OrigenComida::Pool));
+        const int rareza = bolsaComida[indiceBolsaComida];
 
-    // P3 (Común): 15 ítems, 15 HP
-    for (int i = 0; i < 15; ++i)
-        colaComida.insertar(Comida(idPool++, 3, 15, 0, 0, OrigenComida::Pool));
+        if (excluirRara && rareza == 1) {
+            indiceBolsaComida++; 
+            continue;
+        }
+        indiceBolsaComida++;
+        return rareza;
+    }
 }
 
 float MotorGrafico::calcularIntervaloComida(const std::string& nombreEstacion)
@@ -493,4 +474,3 @@ float MotorGrafico::calcularIntervaloComida(const std::string& nombreEstacion)
     float factor = 0.7f + 0.6f * (static_cast<float>(std::rand()) / RAND_MAX);
     return base * factor;
 }
-

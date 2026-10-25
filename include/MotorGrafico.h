@@ -1,9 +1,9 @@
 #ifndef MOTOR_GRAFICO_H
 #define MOTOR_GRAFICO_H
 
+#include <array>
 #include <SFML/Graphics.hpp>
 #include "PilaDinamica.h"
-#include "ColaConPrioridad.h"
 #include "ColaCircular.h"
 
 class GestorRecursos; // declaración adelantada
@@ -17,9 +17,10 @@ private:
     // El motor solo necesita saber qué tan grande es el "mundo" donde viven los bichitos.
     sf::Vector2f tamanoMundo;
     PilaDinamica<Bichito>& poblacion;
-    ColaConPrioridad colaComida;
     PilaDinamica<Comida> comidasActivas; // antes std::vector<Comida>
     ColaCircular estaciones;
+    std::array<int, 10> bolsaComida;
+    int indiceBolsaComida;
 
     float tiempoCambioEstacion;
     float temporizadorEstacion;
@@ -39,9 +40,9 @@ private:
     void procesarEscenarioCompetencia(float dt);
     void procesarEscenarioReproduccion(float dt);
     void procesarSimulacionGeneral(float dt);
-    Comida extraerComidaSegunEstacion();
 
-    void inicializarPoolComida();
+    void mezclarBolsaComida();
+    int obtenerRarezaSiguiente();
     float calcularIntervaloComida(const std::string& nombreEstacion);
 
 public:
