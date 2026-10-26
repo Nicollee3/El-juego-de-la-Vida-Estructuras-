@@ -12,13 +12,13 @@
 #include <string>
 #include "Comida.h"
 #include "ArregloDinamico.h"    // Contiene la plantilla ArregloDinamico<T>
-#include "Diccionario.Comida.h" 
+#include "Diccionario.h"
 
 class AdministradorComida
 {
 private:
     ArregloDinamico<Comida> comidasActivas; // Arreglo dinámico de objetos Comida
-    TablaHashComidas tablaHash;             
+    Diccionario<int> tablaHash;
     int siguienteId;
 
 public:
@@ -73,7 +73,7 @@ public:
         // 1. Guardar en el Arreglo Dinámico
         comidasActivas.generar(nuevaComida);
 
-        // 2. Registrar en el Diccionario (de Karoll) el ID y el índice que ocupó en el arreglo
+        // Registrar el ID y el índice que ocupó en el arreglo.
         int ultimoIndice = comidasActivas.longitud() - 1;
         tablaHash.insertar(siguienteId, ultimoIndice);
 
@@ -86,16 +86,16 @@ public:
      */
     bool consumirComidaPorId(int idComida)
     {
-        // 1. Buscar en el diccionario de Karoll el índice de la comida en O(1)
-        int indice = tablaHash.buscarIndice(idComida);
-        if (indice == -1) return false;
+        // Buscar en el diccionario el índice de la comida en O(1) promedio.
+        int indice;
+        if (!tablaHash.buscar(idComida, indice)) return false;
 
-        // 2. Borrar del diccionario
+        // Borrar del diccionario.
         tablaHash.eliminar(idComida);
 
         // 3. Si el elemento a eliminar no es el último del arreglo dinámico,
         // al hacer Swap & Pop la última comida pasará al índice 'indice'.
-        // Debemos actualizar la nueva posición de esa comida movida en el diccionario de Karoll.
+        // Actualizar en el diccionario la posición de la comida movida.
         int ultimoIndice = comidasActivas.longitud() - 1;
         if (indice != ultimoIndice)
         {
@@ -112,7 +112,11 @@ public:
     // Métodos de consulta
     ArregloDinamico<Comida>& getComidasActivas() { return comidasActivas; }
     int getNumComidas() const { return comidasActivas.longitud(); }
-    void vaciar() { comidasActivas.vaciar(); }
+    void vaciar()
+    {
+        comidasActivas.vaciar();
+        tablaHash.vaciar();
+    }
 };
 
 #endif

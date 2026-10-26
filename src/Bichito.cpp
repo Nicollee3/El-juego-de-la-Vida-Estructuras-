@@ -3,6 +3,7 @@
 #include <algorithm>      
 #include "Bichito.h"
 #include "ArregloDinamico.h"
+#include "Diccionario.h"
 #include "gui/Config.h"
 
 // --- CONSTRUCTORES ---
@@ -105,7 +106,8 @@ void Bichito::buscarComida(ArregloDinamico<Comida>& comidas) {
     }
 }
 
-void Bichito::buscarPareja(ArregloDinamico<Bichito>& poblacion, float dt) {
+void Bichito::buscarPareja(ArregloDinamico<Bichito>& poblacion,
+                           Diccionario<int>& indices, float dt) {
     int idxPareja = -1;
     float minDist = 999999.0f;
 
@@ -138,7 +140,7 @@ void Bichito::buscarPareja(ArregloDinamico<Bichito>& poblacion, float dt) {
 
             // Al cumplir 2 segundos juntos, se reproducen
             if (tiempoCercaPareja >= 2.0f) {
-                reproducirseCon(pareja, poblacion);
+                reproducirseCon(pareja, poblacion, indices);
             }
         } else {
             tiempoCercaPareja = 0.0f; // Se alejaron, se reinicia la cuenta
@@ -148,12 +150,17 @@ void Bichito::buscarPareja(ArregloDinamico<Bichito>& poblacion, float dt) {
     }
 }
 
-void Bichito::reproducirseCon(Bichito& pareja, ArregloDinamico<Bichito>& poblacion) {
+void Bichito::reproducirseCon(Bichito& pareja, ArregloDinamico<Bichito>& poblacion,
+                              Diccionario<int>& indices) {
     // 1. Calcular las coordenadas y crear la instancia del hijo
     float hijoX = (this->x + pareja.getX()) / 2.0f;
     float hijoY = (this->y + pareja.getY()) / 2.0f;
 
-    int nuevoId = rand() % 9000 + 1000;
+    int nuevoId = 1;
+    while (indices.contiene(nuevoId))
+    {
+        ++nuevoId;
+    }
     Bichito hijo(nuevoId, 40.0f, hijoX, hijoY);
     hijo.setTarget(hijoX + (rand() % 100 - 50), hijoY + (rand() % 100 - 50));
 
@@ -169,6 +176,7 @@ void Bichito::reproducirseCon(Bichito& pareja, ArregloDinamico<Bichito>& poblaci
 
     // 3. Insertar al hijo al final
     poblacion.generar(hijo);
+    indices.insertar(nuevoId, poblacion.longitud() - 1);
 }
 
 void Bichito::pasear() {
@@ -211,7 +219,7 @@ void Bichito::moverHaciaObjetivo(float dt) {
 }
 
 void Bichito::actualizar(float dt, ArregloDinamico<Comida>& comidas,
-                         ArregloDinamico<Bichito>& poblacion) {
+                         ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices) {
     evaluarEstado();
 
     switch (estado) {
@@ -219,7 +227,7 @@ void Bichito::actualizar(float dt, ArregloDinamico<Comida>& comidas,
             buscarComida(comidas);
             break;
         case EstadoBichito::BuscandoPareja:
-            buscarPareja(poblacion, dt);
+            buscarPareja(poblacion, indices, dt);
             break;
         case EstadoBichito::DePaseo:
             pasear();

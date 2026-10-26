@@ -14,6 +14,8 @@
 
 class Comida;
 template <typename T>
+class Diccionario;
+template <typename T>
 class ArregloDinamico;
 
 /*
@@ -58,8 +60,9 @@ private:
      */
     void destinoAleatorio();
     void buscarComida(ArregloDinamico<Comida>& comidas);
-    void buscarPareja(ArregloDinamico<Bichito>& poblacion, float dt);
-    void reproducirseCon(Bichito& pareja, ArregloDinamico<Bichito>& poblacion);
+    void buscarPareja(ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices, float dt);
+    void reproducirseCon(Bichito& pareja, ArregloDinamico<Bichito>& poblacion,
+                         Diccionario<int>& indices);
 
 public:
     /*
@@ -114,7 +117,7 @@ public:
      * @param dt Incremento de tiempo transcurrido.
      */
     void actualizar(float dt, ArregloDinamico<Comida>& comidas,
-                    ArregloDinamico<Bichito>& poblacion);
+                    ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices);
     /*
      * @brief Incrementa o decrementa la vida actual del bichito de forma segura (siempre queda entre 0 y 100).
      * @param delta Cantidad de vida a sumar (positiva) o restar (negativa).

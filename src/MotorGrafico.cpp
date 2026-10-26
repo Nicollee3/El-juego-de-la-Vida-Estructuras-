@@ -80,7 +80,64 @@ void MotorGrafico::agregarComida(float x, float y, int prioridad, int puntosVida
     // }
 
     Comida c(idComida++, prioridad, puntosVida, x, y);
-    comidasActivas.generar(c); // Solo va a la lista activa (antes push_back)
+    comidasActivas.generar(c);
+    indicesComida.insertar(c.getId(), comidasActivas.longitud() - 1);
+}
+
+void MotorGrafico::agregarBichitoAlFinal(Bichito bichito)
+{
+    if (indicesBichitos.contiene(bichito.getId()))
+    {
+        int idDisponible = 1;
+        while (indicesBichitos.contiene(idDisponible))
+        {
+            ++idDisponible;
+        }
+        bichito.setId(idDisponible);
+    }
+
+    poblacion.generar(bichito);
+    indicesBichitos.insertar(bichito.getId(), poblacion.longitud() - 1);
+}
+
+void MotorGrafico::eliminarBichitoEn(int indice)
+{
+    const int ultimoIndice = poblacion.longitud() - 1;
+    const int idEliminado = poblacion.obtenerRef(indice).getId();
+    const int idMovido = indice != ultimoIndice ? poblacion.obtenerRef(ultimoIndice).getId() : -1;
+
+    indicesBichitos.eliminar(idEliminado);
+    poblacion.morir(indice);
+    if (indice != ultimoIndice)
+    {
+        indicesBichitos.insertar(idMovido, indice);
+    }
+}
+
+void MotorGrafico::vaciarPoblacion()
+{
+    poblacion.vaciar();
+    indicesBichitos.vaciar();
+}
+
+void MotorGrafico::eliminarComidaEn(int indice)
+{
+    const int ultimoIndice = comidasActivas.longitud() - 1;
+    const int idEliminado = comidasActivas.obtenerRef(indice).getId();
+    const int idMovido = indice != ultimoIndice ? comidasActivas.obtenerRef(ultimoIndice).getId() : -1;
+
+    indicesComida.eliminar(idEliminado);
+    comidasActivas.morir(indice);
+    if (indice != ultimoIndice)
+    {
+        indicesComida.insertar(idMovido, indice);
+    }
+}
+
+void MotorGrafico::vaciarComidas()
+{
+    comidasActivas.vaciar();
+    indicesComida.vaciar();
 }
 
 void MotorGrafico::agregarBichito()
@@ -92,25 +149,23 @@ void MotorGrafico::agregarBichito()
     const float y = 40.0f + static_cast<float>(std::rand() % rangoY);
 
     Bichito b(idNuevo++, 40.0f, x, y);
-    poblacion.generar(b);
+    agregarBichitoAlFinal(b);
 }
 
 void MotorGrafico::quitarBichito()
 {
     if (poblacion.longitud() > 0)
-        poblacion.borrar();
+        eliminarBichitoEn(poblacion.longitud() - 1);
 }
 
 void MotorGrafico::cargarSimulacionGeneral()
 {
     modoActual = ModoSimulacion::Normal;
     pausado = true; // Empieza pausado
-    comidasActivas.vaciar();
+    vaciarComidas();
 
     // Limpiar población anterior
-    while (poblacion.longitud() > 0) {
-        poblacion.morir(0);
-    }
+    vaciarPoblacion();
 
     mezclarBolsaComida();
 
@@ -131,12 +186,10 @@ void MotorGrafico::cargarEscenarioCompetencia(int nAgentes)
     if (nAgentes < 1) nAgentes = 1;
 
     modoActual = ModoSimulacion::EscenarioCompetencia;
-    comidasActivas.vaciar(); // antes clear()
+    vaciarComidas();
 
     // Limpiar población reiniciando índices (eliminando iterativamente)
-    while (poblacion.longitud() > 0) {
-        poblacion.morir(0);
-    }
+    vaciarPoblacion();
 
     // Ubicar 1 unidad de comida en el centro
     float centroX = tamanoMundo.x / 2.0f;
@@ -153,18 +206,16 @@ void MotorGrafico::cargarEscenarioCompetencia(int nAgentes)
         Bichito b(i + 1, 20.0f, bx, by); // Vida inicial baja (20 pts)
         b.setTarget(centroX, centroY);
         b.setEstado(EstadoBichito::BuscandoComida);
-        poblacion.generar(b);
+        agregarBichitoAlFinal(b);
     }
 }
 
 void MotorGrafico::cargarEscenarioReproduccion()
 {
     modoActual = ModoSimulacion::EscenarioReproduccion;
-    comidasActivas.vaciar(); // antes clear()
+    vaciarComidas();
 
-    while (poblacion.longitud() > 0) {
-        poblacion.morir(0);
-    }
+    vaciarPoblacion();
 
     // Crear dos agentes ubicados a corta distancia el uno del otro
     // CAMBIO: tamanoMundo en vez de ventana.getSize()
@@ -180,8 +231,8 @@ void MotorGrafico::cargarEscenarioReproduccion()
     b1.setEstado(EstadoBichito::BuscandoPareja);
     b2.setEstado(EstadoBichito::BuscandoPareja);
 
-    poblacion.generar(b1);
-    poblacion.generar(b2);
+    agregarBichitoAlFinal(b1);
+    agregarBichitoAlFinal(b2);
 }
 
 // NUEVO: reemplaza la parte de eventos que estaba dentro de ejecutar().
@@ -258,7 +309,7 @@ void MotorGrafico::actualizarFisica(float dt)
             agregarComida(xMuerte, yMuerte, 2, 30);
         
             // 3. Eliminamos el bichito de la población
-            poblacion.morir(i);
+            eliminarBichitoEn(i);
         }
     }
 }
@@ -289,7 +340,7 @@ void MotorGrafico::procesarEscenarioCompetencia(float dt)
 
     // Eliminar comida consumida
     if (!comidaUnica.isActiva()) {
-        comidasActivas.vaciar(); // antes clear()
+        vaciarComidas();
     }
 }
 
@@ -323,7 +374,7 @@ void MotorGrafico::procesarEscenarioReproduccion(float dt)
                 int nuevoId = poblacion.longitud() + 100;
                 Bichito hijo(nuevoId, 40.0f, hijoX, hijoY);
                 hijo.setTarget(hijoX + (rand() % 100 - 50), hijoY + (rand() % 100 - 50));
-                poblacion.generar(hijo);
+                agregarBichitoAlFinal(hijo);
 
                 std::cout << "¡Nacio un nuevo Bichito (ID: " << nuevoId << ") por reproduccion!\n";
 
@@ -375,14 +426,14 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
 
     // Actualización física de bichitos
     for (int i = 0; i < poblacion.longitud(); ++i) {
-        poblacion.obtenerRef(i).actualizar(dt, comidasActivas, poblacion);
+        poblacion.obtenerRef(i).actualizar(dt, comidasActivas, poblacion, indicesBichitos);
     }
     
     // La comida consumida se elimina del arreglo dinámico y no se recicla en la bolsa.
     for (int i = comidasActivas.longitud() - 1; i >= 0; --i) {
         Comida& c = comidasActivas.obtenerRef(i);
         if (!c.isActiva())
-            comidasActivas.morir(i);
+            eliminarComidaEn(i);
     }
 }
 

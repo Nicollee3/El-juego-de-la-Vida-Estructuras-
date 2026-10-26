@@ -6,6 +6,7 @@
 #include <SFML/Graphics.hpp>
 #include "ArregloDinamico.h"
 #include "ColaCircular.h"
+#include "Diccionario.h"
 
 class GestorRecursos; // declaración adelantada
 
@@ -19,6 +20,8 @@ private:
     sf::Vector2f tamanoMundo;
     ArregloDinamico<Bichito>& poblacion;
     ArregloDinamico<Comida> comidasActivas;
+    Diccionario<int> indicesBichitos;
+    Diccionario<int> indicesComida;
     ColaCircular estaciones;
     std::array<int, 10> bolsaComida;
     int indiceBolsaComida;
@@ -41,6 +44,11 @@ private:
     void procesarEscenarioCompetencia(float dt);
     void procesarEscenarioReproduccion(float dt);
     void procesarSimulacionGeneral(float dt);
+    void agregarBichitoAlFinal(Bichito bichito);
+    void eliminarBichitoEn(int indice);
+    void vaciarPoblacion();
+    void eliminarComidaEn(int indice);
+    void vaciarComidas();
 
     void mezclarBolsaComida();
     int obtenerRarezaSiguiente();
