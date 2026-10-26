@@ -21,6 +21,7 @@
 #define COLA_PRIORIDAD_H
 
 #include "Cola.h"
+#include "Bichito.h"
 
     /*
      * @class ColaPrioridad
@@ -29,7 +30,7 @@
     class ColaPrioridad
 {
 private:
-    Cola niveles[4]; // Arreglo FIJO de 4 colas (una por nivel)
+    Cola<Bichito> niveles[4]; // Arreglo FIJO de 4 colas (una por nivel)
     int N;
 
 public:

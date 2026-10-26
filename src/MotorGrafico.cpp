@@ -69,7 +69,8 @@ void MotorGrafico::setPrioridadComida(int p)
     if (p >= 1 && p <= 3) prioridadComida = p;
 }
 
-void MotorGrafico::agregarComida(float x, float y, int prioridad, int puntosVida)
+void MotorGrafico::agregarComida(float x, float y, int prioridad, int puntosVida,
+                                 OrigenComida origen)
 {
     static int idComida = 1;
 
@@ -79,7 +80,7 @@ void MotorGrafico::agregarComida(float x, float y, int prioridad, int puntosVida
     //     prioridad = 2;
     // }
 
-    Comida c(idComida++, prioridad, puntosVida, x, y);
+    Comida c(idComida++, prioridad, puntosVida, x, y, origen);
     comidasActivas.generar(c);
     indicesComida.insertar(c.getId(), comidasActivas.longitud() - 1);
 }
@@ -100,12 +101,17 @@ void MotorGrafico::agregarBichitoAlFinal(Bichito bichito)
     indicesBichitos.insertar(bichito.getId(), poblacion.longitud() - 1);
 }
 
-void MotorGrafico::eliminarBichitoEn(int indice)
+void MotorGrafico::eliminarBichitoEn(int indice, bool retirarDeCola)
 {
     const int ultimoIndice = poblacion.longitud() - 1;
-    const int idEliminado = poblacion.obtenerRef(indice).getId();
+    const Bichito &eliminado = poblacion.obtenerRef(indice);
+    const int idEliminado = eliminado.getId();
     const int idMovido = indice != ultimoIndice ? poblacion.obtenerRef(ultimoIndice).getId() : -1;
 
+    if (retirarDeCola && eliminado.estaCondenado())
+    {
+        colaEliminacion.eliminar(idEliminado);
+    }
     indicesBichitos.eliminar(idEliminado);
     poblacion.morir(indice);
     if (indice != ultimoIndice)
@@ -118,6 +124,47 @@ void MotorGrafico::vaciarPoblacion()
 {
     poblacion.vaciar();
     indicesBichitos.vaciar();
+    colaEliminacion.vaciar();
+}
+
+void MotorGrafico::encolarCondenados()
+{
+    for (int i = 0; i < poblacion.longitud(); ++i)
+    {
+        Bichito &bichito = poblacion.obtenerRef(i);
+        if (bichito.condenar())
+        {
+            colaEliminacion.insertar_al_ultimo(bichito.getId());
+        }
+    }
+}
+
+void MotorGrafico::procesarColaEliminacion(int elementosPendientes)
+{
+    for (int i = 0; i < elementosPendientes; ++i)
+    {
+        int idCondenado;
+        if (!colaEliminacion.eliminar_primero(idCondenado))
+        {
+            return;
+        }
+
+        int indice;
+        if (!indicesBichitos.buscar(idCondenado, indice))
+        {
+            continue;
+        }
+
+        Bichito &bichito = poblacion.obtenerRef(indice);
+        if (!bichito.estaCondenado())
+        {
+            continue;
+        }
+
+        agregarComida(bichito.getX(), bichito.getY(), 2, 30, OrigenComida::Cadaver);
+        eliminarBichitoEn(indice, false);
+        return;
+    }
 }
 
 void MotorGrafico::eliminarComidaEn(int indice)
@@ -258,7 +305,7 @@ void MotorGrafico::procesarEvento(const sf::Event& evento)
         static_cast<float>(evento.mouseButton.x) < tamanoMundo.x &&
         static_cast<float>(evento.mouseButton.y) < tamanoMundo.y) {
         agregarComida(static_cast<float>(evento.mouseButton.x),
-        static_cast<float>(evento.mouseButton.y), prioridadComida);
+        static_cast<float>(evento.mouseButton.y), prioridadComida, 30, OrigenComida::Clic);
     }
 }
 
@@ -271,6 +318,9 @@ void MotorGrafico::actualizar(float dt)
 
 void MotorGrafico::actualizarFisica(float dt)
 {
+    const int condenadosAlInicio = colaEliminacion.longitud();
+    encolarCondenados();
+
     // 1. Control del ciclo de estaciones
     temporizadorEstacion += dt;
     if (temporizadorEstacion >= tiempoCambioEstacion) {
@@ -290,39 +340,48 @@ void MotorGrafico::actualizarFisica(float dt)
     }
 
     // 3. Desgaste de vida por la estación actual y muerte
-    for (int i = poblacion.longitud() - 1; i >= 0; --i) {
+    for (int i = 0; i < poblacion.longitud(); ++i) {
         Bichito& b = poblacion.obtenerRef(i);
-        b.cambiarVida(-(estacionActual.desgasteVida * 0.5f * dt));
-        
-        if (b.getCooldownReproduccion() > 0.0f) {
-            b.setCooldownReproduccion(b.getCooldownReproduccion() - dt);
-        }
-    
-        // Comprobar si el bichito ha muerto
-        if (b.getVida() <= 0.0f) {
-            // 1. Guardamos la posición exacta antes de eliminarlo
-            float xMuerte = b.getX();
-            float yMuerte = b.getY();
-        
-            // 2. Generamos una nueva comida de Prioridad 2 en esa ubicación
-            //    (puedes ajustar los puntos de vida que da esa comida, por defecto 30 o el que tenga configurado)
-            agregarComida(xMuerte, yMuerte, 2, 30);
-        
-            // 3. Eliminamos el bichito de la población
-            eliminarBichitoEn(i);
+        if (!b.estaCondenado())
+        {
+            b.cambiarVida(-(estacionActual.desgasteVida * 0.5f * dt));
+
+            if (b.getCooldownReproduccion() > 0.0f) {
+                b.setCooldownReproduccion(b.getCooldownReproduccion() - dt);
+            }
+
         }
     }
+
+    encolarCondenados();
+    procesarColaEliminacion(condenadosAlInicio);
 }
 
 void MotorGrafico::procesarEscenarioCompetencia(float dt)
 {
-    if (comidasActivas.longitud() == 0) return; // antes empty()
+    if (comidasActivas.longitud() == 0)
+    {
+        for (int i = 0; i < poblacion.longitud(); ++i)
+        {
+            Bichito &b = poblacion.obtenerRef(i);
+            if (b.estaCondenado())
+            {
+                b.actualizarSoloPaseo(dt);
+            }
+        }
+        return;
+    }
 
     Comida& comidaUnica = comidasActivas.obtenerRef(0); // antes comidasActivas[0]
     float radioColisionComida = 15.0f;
 
     for (int i = 0; i < poblacion.longitud(); ++i) {
         Bichito& b = poblacion.obtenerRef(i);
+        if (b.estaCondenado())
+        {
+            b.actualizarSoloPaseo(dt);
+            continue;
+        }
         b.setTarget(comidaUnica.getX(), comidaUnica.getY());
         b.moverHaciaObjetivo(dt);
 
@@ -351,10 +410,19 @@ void MotorGrafico::procesarEscenarioReproduccion(float dt)
 
     for (int i = 0; i < poblacion.longitud(); ++i) {
         Bichito& b = poblacion.obtenerRef(i);
-        b.moverHaciaObjetivo(dt);
+        if (b.estaCondenado())
+        {
+            b.actualizarSoloPaseo(dt);
+        }
+        else
+        {
+            b.moverHaciaObjetivo(dt);
+        }
     }
 
-    if (poblacion.longitud() >= 2) {
+    if (poblacion.longitud() >= 2 &&
+        !poblacion.obtenerRef(0).estaCondenado() &&
+        !poblacion.obtenerRef(1).estaCondenado()) {
         Bichito& b1 = poblacion.obtenerRef(0);
         Bichito& b2 = poblacion.obtenerRef(1);
 
@@ -426,7 +494,15 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
 
     // Actualización física de bichitos
     for (int i = 0; i < poblacion.longitud(); ++i) {
-        poblacion.obtenerRef(i).actualizar(dt, comidasActivas, poblacion, indicesBichitos);
+        Bichito &bichito = poblacion.obtenerRef(i);
+        if (bichito.estaCondenado())
+        {
+            bichito.actualizarSoloPaseo(dt);
+        }
+        else
+        {
+            bichito.actualizar(dt, comidasActivas, poblacion, indicesBichitos);
+        }
     }
     
     // La comida consumida se elimina del arreglo dinámico y no se recicla en la bolsa.

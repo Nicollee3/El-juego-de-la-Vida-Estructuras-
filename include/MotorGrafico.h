@@ -5,6 +5,7 @@
 #include <string>
 #include <SFML/Graphics.hpp>
 #include "ArregloDinamico.h"
+#include "Cola.h"
 #include "ColaCircular.h"
 #include "Diccionario.h"
 
@@ -22,6 +23,7 @@ private:
     ArregloDinamico<Comida> comidasActivas;
     Diccionario<int> indicesBichitos;
     Diccionario<int> indicesComida;
+    Cola<int> colaEliminacion;
     ColaCircular estaciones;
     std::array<int, 10> bolsaComida;
     int indiceBolsaComida;
@@ -44,8 +46,10 @@ private:
     void procesarEscenarioCompetencia(float dt);
     void procesarEscenarioReproduccion(float dt);
     void procesarSimulacionGeneral(float dt);
+    void encolarCondenados();
+    void procesarColaEliminacion(int elementosPendientes);
     void agregarBichitoAlFinal(Bichito bichito);
-    void eliminarBichitoEn(int indice);
+    void eliminarBichitoEn(int indice, bool retirarDeCola = true);
     void vaciarPoblacion();
     void eliminarComidaEn(int indice);
     void vaciarComidas();
@@ -64,7 +68,8 @@ public:
     void actualizar(float dt);
     void dibujar(sf::RenderTarget& destino, GestorRecursos& recursos);
 
-    void agregarComida(float x, float y, int prioridad = 1, int puntosVida = 30);
+    void agregarComida(float x, float y, int prioridad = 1, int puntosVida = 30,
+                       OrigenComida origen = OrigenComida::Pool);
     // CAMBIO: si no se indica nAgentes (o es negativo) se usa el valor configurado.
     void cargarEscenarioCompetencia(int nAgentes = -1);
     void cargarEscenarioReproduccion();

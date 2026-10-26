@@ -11,13 +11,13 @@ Bichito::Bichito()
     : id(0), vida(30.0f), x(0.0f), y(0.0f), targetX(0.0f), targetY(0.0f),
       velocidad(120.0f), estado(EstadoBichito::BuscandoComida),
       tiempoCercaPareja(0.0f), idParejaObjetivo(-1), cooldownReproduccion(0.0f), 
-      siguiendoComida(false){}
+      siguiendoComida(false), condenado(false){}
 
 Bichito::Bichito(int _id, float _vida, float _x, float _y) 
     : id(_id), vida(_vida), x(_x), y(_y), targetX(_x), targetY(_y),
       velocidad(120.0f), estado(EstadoBichito::BuscandoComida),
       tiempoCercaPareja(0.0f), idParejaObjetivo(-1), cooldownReproduccion(0.0f), 
-      siguiendoComida(false) {}
+      siguiendoComida(false), condenado(false) {}
 
 // --- SETTERS CON LÓGICA ---
 bool Bichito::setVida(float _vida) {
@@ -33,6 +33,21 @@ void Bichito::cambiarVida(float delta) {
     if (nueva < 0.0f) nueva = 0.0f;
     if (nueva > 200.0f) nueva = 200.0f;
     setVida(nueva);
+}
+
+bool Bichito::condenar()
+{
+    if (condenado || vida >= 20.0f)
+    {
+        return false;
+    }
+
+    condenado = true;
+    estado = EstadoBichito::DePaseo;
+    siguiendoComida = false;
+    setVelocidad(60.0f);
+    destinoAleatorio();
+    return true;
 }
 
 // --- MÉTODOS PRIVADOS ---
@@ -218,8 +233,20 @@ void Bichito::moverHaciaObjetivo(float dt) {
     }
 }
 
+void Bichito::actualizarSoloPaseo(float dt)
+{
+    pasear();
+    moverHaciaObjetivo(dt);
+}
+
 void Bichito::actualizar(float dt, ArregloDinamico<Comida>& comidas,
                          ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices) {
+    if (condenado)
+    {
+        actualizarSoloPaseo(dt);
+        return;
+    }
+
     evaluarEstado();
 
     switch (estado) {

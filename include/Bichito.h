@@ -45,6 +45,7 @@ private:
     int idParejaObjetivo;
     float cooldownReproduccion;
     bool siguiendoComida;
+    bool condenado;
 
     // Declaración de métodos privados (sus cuerpos están en el .cpp)
     /*
@@ -105,12 +106,15 @@ public:
     void setIdParejaObjetivo(int _idP) { idParejaObjetivo = _idP; }
     void setCooldownReproduccion(float _cd) { cooldownReproduccion = _cd; }
     void setSiguiendoComida(bool _sc) { siguiendoComida = _sc; }
+    bool estaCondenado() const { return condenado; }
+    bool condenar();
 
     /*
      * @brief Desplaza al bichito de manera fluida hacia su posición objetivo (targetX, targetY).
      * @param dt Incremento de tiempo (delta time) transcurrido en el fotograma.
      */
     void moverHaciaObjetivo(float dt);
+    void actualizarSoloPaseo(float dt);
     /*
      * @brief Actualiza la lógica del bichito (estado, movimiento) en cada ciclo del juego.
      * @details La vida NO baja aquí: el desgaste por segundo lo aplica el juego con cambiarVida(-1).
