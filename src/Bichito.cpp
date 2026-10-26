@@ -6,6 +6,11 @@
 #include "Diccionario.h"
 #include "gui/Config.h"
 
+namespace
+{
+    constexpr float RANGO_DETECCION_COMIDA = 400.0f;
+}
+
 // --- CONSTRUCTORES ---
 Bichito::Bichito() 
     : id(0), vida(30.0f), x(0.0f), y(0.0f), targetX(0.0f), targetY(0.0f),
@@ -93,7 +98,7 @@ void Bichito::buscarComida(ArregloDinamico<Comida>& comidas) {
         float dx = comidas.obtenerRef(j).getX() - x;
         float dy = comidas.obtenerRef(j).getY() - y;
         float dist = std::sqrt(dx * dx + dy * dy);
-        if (dist < minDist) {
+        if (dist <= RANGO_DETECCION_COMIDA && dist < minDist) {
             minDist = dist;
             idxCercano = j;
         }

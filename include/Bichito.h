@@ -123,7 +123,7 @@ public:
     void actualizar(float dt, ArregloDinamico<Comida>& comidas,
                     ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices);
     /*
-     * @brief Incrementa o decrementa la vida actual del bichito de forma segura (siempre queda entre 0 y 100).
+     * @brief Incrementa o decrementa la vida actual del bichito de forma segura (siempre queda entre 0 y 200).
      * @param delta Cantidad de vida a sumar (positiva) o restar (negativa).
      */
     void cambiarVida(float delta);
