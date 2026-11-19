@@ -26,8 +26,10 @@ private:
     Diccionario<int> indicesBichitos;
     Diccionario<int> indicesComida;
     Cola<int> colaEliminacion;
+    ColaPrioridadVejez colaVejez;
     ColaCircular estaciones;
     MotorDesastres motorDesastres;
+    float tiempoSimulacion;
     std::array<int, 10> bolsaComida;
     int indiceBolsaComida;
 
@@ -72,6 +74,9 @@ private:
     void procesarSimulacionGeneral(float dt);
     void encolarCondenados();
     void procesarColaEliminacion(int elementosPendientes);
+    void registrarEnColaVejez(const Bichito& bichito);
+    void procesarMuertesPorHambre();
+    void procesarMuertesPorVejez();
     void agregarBichitoAlFinal(Bichito bichito);
     void eliminarBichitoEn(int indice, bool retirarDeCola = true);
     void eliminarBichitoPorId(int id);

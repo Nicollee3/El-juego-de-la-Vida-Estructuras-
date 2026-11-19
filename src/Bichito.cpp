@@ -9,22 +9,35 @@
 namespace
 {
     constexpr float RANGO_DETECCION_COMIDA = 400.0f;
+    constexpr float EDAD_MAXIMA_MIN = 20.0f;
+    constexpr float EDAD_MAXIMA_MAX = 400.0f;
+
+    float generarEdadMaximaAleatoria()
+    {
+        const float u = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
+        return EDAD_MAXIMA_MIN + u * (EDAD_MAXIMA_MAX - EDAD_MAXIMA_MIN);
+    }
 }
 
 // --- CONSTRUCTORES ---
 Bichito::Bichito() 
-    : id(0), vida(30.0f), x(0.0f), y(0.0f), targetX(0.0f), targetY(0.0f),
+    : id(0), vida(30.0f), edadActual(0.0f), edadMaxima(generarEdadMaximaAleatoria()), inmortal(false),
+      x(0.0f), y(0.0f), targetX(0.0f), targetY(0.0f),
       velocidad(120.0f), estado(EstadoBichito::BuscandoComida),
       tiempoCercaPareja(0.0f), idParejaObjetivo(-1), cooldownReproduccion(0.0f), 
       siguiendoComida(false), condenado(false){}
 
 Bichito::Bichito(int _id, float _vida, float _x, float _y) 
-    : id(_id), vida(_vida), x(_x), y(_y), targetX(_x), targetY(_y),
+    : id(_id), vida(_vida), edadActual(0.0f), edadMaxima(generarEdadMaximaAleatoria()), inmortal(false),
+      x(_x), y(_y), targetX(_x), targetY(_y),
       velocidad(120.0f), estado(EstadoBichito::BuscandoComida),
       tiempoCercaPareja(0.0f), idParejaObjetivo(-1), cooldownReproduccion(0.0f), 
       siguiendoComida(false), condenado(false) {}
 
 // --- SETTERS CON LÓGICA ---
+void Bichito::setEdadMaxima(float _edadMax) {
+    edadMaxima = std::max(EDAD_MAXIMA_MIN, std::min(_edadMax, EDAD_MAXIMA_MAX));
+}
 bool Bichito::setVida(float _vida) {
     if (_vida >= 0.0f && _vida <= 200.0f) {
         vida = _vida;
@@ -182,6 +195,12 @@ void Bichito::reproducirseCon(Bichito& pareja, ArregloDinamico<Bichito>& poblaci
         ++nuevoId;
     }
     Bichito hijo(nuevoId, 40.0f, hijoX, hijoY);
+    // Herencia de esperanza de vida por linaje con ligera variación generacional (+/- 15%)
+    const float promedioEdadMax = (this->edadMaxima + pareja.getEdadMaxima()) * 0.5f;
+    const float factorMutacion = 0.85f + 0.30f * (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX));
+    hijo.setEdadActual(0.0f);
+    hijo.setEdadMaxima(promedioEdadMax * factorMutacion);
+    hijo.setInmortal(this->inmortal || pareja.esInmortal());
     hijo.setTarget(hijoX + (rand() % 100 - 50), hijoY + (rand() % 100 - 50));
 
     // 2. Modificar a los padres

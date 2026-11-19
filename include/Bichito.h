@@ -37,6 +37,9 @@ class Bichito
 private:
     int id;
     float vida;
+    float edadActual;
+    float edadMaxima;
+    bool inmortal;
     float x, y;
     float targetX, targetY;
     float velocidad;
@@ -78,6 +81,9 @@ public:
      */
     int getId() const { return id; }
     float getVida() const { return vida; }
+    float getEdadActual() const { return edadActual; }
+    float getEdadMaxima() const { return edadMaxima; }
+    bool esInmortal() const { return inmortal; }
     float getX() const { return x; }
     float getY() const { return y; }
     float getTargetX() const { return targetX; }
@@ -90,6 +96,12 @@ public:
 
     void setId(int _id) { id = _id; }
     bool setVida(float _vida);
+    void setEdadActual(float _edad) { edadActual = (_edad >= 0.0f) ? _edad : 0.0f; }
+    void setEdadMaxima(float _edadMax);
+    void setInmortal(bool _inm) { inmortal = _inm; }
+    void envejecer(float dt) { if (dt > 0.0f) edadActual += dt; }
+    bool murioDeHambre() const { return vida <= 0.0f; }
+    bool murioPorVejez() const { return !inmortal && edadActual >= edadMaxima; }
     void setPosicion(float _x, float _y)
     {
         x = _x;

@@ -58,7 +58,7 @@ public:
     static constexpr int BAJAS_METEORITOS = 20;
     static constexpr int BAJAS_DILUVIO = 30;
     static constexpr int BAJAS_BOMBA_NUCLEAR = 100;
-    static constexpr int BAJAS_PATRIA_MILAGRO = 120;
+    static constexpr int BAJAS_PATRIA_MILAGRO = 60;
 
     // Control de sobrepoblación y balance de desastres aleatorios
     static constexpr int UMBRAL_SOBREPOBLACION = 160;

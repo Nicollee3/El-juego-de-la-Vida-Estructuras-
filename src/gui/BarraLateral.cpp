@@ -118,11 +118,6 @@ BarraLateral::BarraLateral(GestorRecursos& recursos, MotorGrafico& motor, std::f
                                "ui/boton_barra_medio", tamMedio);
     btnPat->setColorTinte(sf::Color(255, 210, 95));
 
-    Boton* btnSob = crearBoton("Sobrepoblación", sf::Vector2f(CX, 560),
-                               [this] { motor_.activarDesastre(TipoDesastre::Sobrepoblacion); },
-                               "ui/boton_barra_ancho", tamAncho);
-    btnSob->setColorTinte(sf::Color(255, 125, 135));
-
     // --- Volver al menú ---
     Boton* btnMenu = crearBoton("Menú", sf::Vector2f(CX, 658), [this] {
         if (alVolverAlMenu_) alVolverAlMenu_();
@@ -202,7 +197,7 @@ void BarraLateral::dibujar(sf::RenderTarget& destino) const
                    sf::Color(10, 15, 26, 195), sf::Color(65, 155, 170, 110));
     dibujarTarjeta(destino, xTarjeta, 148.0f, wTarjeta, 256.0f,
                    sf::Color(10, 15, 26, 175), sf::Color(80, 110, 155, 95));
-    dibujarTarjeta(destino, xTarjeta, 414.0f, wTarjeta, 178.0f,
+    dibujarTarjeta(destino, xTarjeta, 414.0f, wTarjeta, 134.0f,
                    sf::Color(26, 13, 21, 195), sf::Color(215, 75, 88, 145));
 
     // 3. Textos y botones

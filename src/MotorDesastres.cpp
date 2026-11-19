@@ -8,10 +8,10 @@ MotorDesastres::MotorDesastres()
     : extractorPerfil(perfilPorDefecto),
       umbralSobrepoblacion(UMBRAL_SOBREPOBLACION),
       objetivoEquilibrio(OBJETIVO_EQUILIBRIO),
-      minIntervaloAleatorio(20.0f),
-      maxIntervaloAleatorio(40.0f),
+      minIntervaloAleatorio(45.0f),
+      maxIntervaloAleatorio(80.0f),
       temporizadorDesastre(0.0f),
-      proximoIntervalo(30.0f)
+      proximoIntervalo(60.0f)
 {
     proximoIntervalo = generarIntervaloAleatorio();
 }
@@ -66,18 +66,15 @@ PerfilReaper MotorDesastres::perfilPorDefecto(const Bichito &bichito)
     PerfilReaper perfil;
     perfil.id = bichito.getId();
     perfil.vida = bichito.getVida();
+    perfil.edad = bichito.getEdadActual();
+    perfil.edadMaxima = bichito.getEdadMaxima();
+    perfil.inmortal = bichito.esInmortal();
 
-    // TODO(Parte 1): cuando se integre el Motor Genético en Bichito, conectar aquí:
-    //   perfil.edad     = bichito.getEdad();
+    // TODO(Parte 1): cuando se integren los genes estáticos en Bichito, conectar aquí:
     //   perfil.enfermo  = bichito.tieneGen(GenEstatico::Enfermedad);
     //   perfil.inmune   = bichito.tieneGen(GenEstatico::Inmunidad);
-    //   perfil.inmortal = bichito.tieneGen(GenEstatico::Inmortal);
-    // Por defecto se asume un adulto sano (edad 20) para que la clasificación por vida
-    // funcione de inmediato en modo desacoplado.
-    perfil.edad = 20.0f;
     perfil.enfermo = false;
     perfil.inmune = false;
-    perfil.inmortal = false;
     return perfil;
 }
 

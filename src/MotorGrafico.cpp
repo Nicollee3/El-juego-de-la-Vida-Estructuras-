@@ -77,6 +77,7 @@ namespace
 MotorGrafico::MotorGrafico(ArregloDinamico<Bichito>& _poblacion, sf::Vector2f _tamanoMundo)
     : tamanoMundo(_tamanoMundo),
     poblacion(_poblacion),
+    tiempoSimulacion(0.0f),
     bolsaComida{{1, 2, 2, 3, 3, 3, 3, 3, 3, 3}},
     indiceBolsaComida(0),
     tiempoCambioEstacion(10.0f),
@@ -139,6 +140,7 @@ void MotorGrafico::agregarBichitoAlFinal(Bichito bichito)
 
     poblacion.generar(bichito);
     indicesBichitos.insertar(bichito.getId(), poblacion.longitud() - 1);
+    registrarEnColaVejez(bichito);
 }
 
 void MotorGrafico::eliminarBichitoEn(int indice, bool retirarDeCola)
@@ -186,6 +188,53 @@ void MotorGrafico::vaciarPoblacion()
     poblacion.vaciar();
     indicesBichitos.vaciar();
     colaEliminacion.vaciar();
+    colaVejez.vaciar();
+    tiempoSimulacion = 0.0f;
+}
+
+void MotorGrafico::registrarEnColaVejez(const Bichito& bichito)
+{
+    // Los inmortales NO mueren de vejez (solo de hambre cuando vida <= 0).
+    if (bichito.esInmortal())
+        return;
+
+    const float tiempoRestante = std::max(0.0f, bichito.getEdadMaxima() - bichito.getEdadActual());
+    colaVejez.insertar(bichito.getId(), tiempoSimulacion + tiempoRestante, bichito.getEdadMaxima());
+}
+
+void MotorGrafico::procesarMuertesPorHambre()
+{
+    // TODOS los bichitos (incluidos inmortales) mueren de hambre al llegar a vida <= 0 (swap-and-pop O(1)).
+    for (int i = poblacion.longitud() - 1; i >= 0; --i)
+    {
+        const Bichito& b = poblacion.obtenerRef(i);
+        if (b.murioDeHambre())
+        {
+            agregarComida(b.getX(), b.getY(), 2, 30, OrigenComida::Cadaver);
+            eliminarBichitoEn(i);
+        }
+    }
+}
+
+void MotorGrafico::procesarMuertesPorVejez()
+{
+    // Consulta O(1) en el Min-Heap: extrae a quienes alcanzaron su edadMaxima y los elimina en swap-and-pop O(1).
+    EntradaVejez tope;
+    while (colaVejez.ver_primero(tope) && tope.tiempoMuerte <= tiempoSimulacion)
+    {
+        colaVejez.eliminar_primero(tope);
+
+        int indice = -1;
+        if (!indicesBichitos.buscar(tope.id, indice))
+            continue; // Ya murió antes por hambre o por un desastre
+
+        const Bichito& b = poblacion.obtenerRef(indice);
+        if (b.esInmortal())
+            continue;
+
+        agregarComida(b.getX(), b.getY(), 2, 30, OrigenComida::Cadaver);
+        eliminarBichitoEn(indice);
+    }
 }
 
 void MotorGrafico::encolarCondenados()
@@ -406,8 +455,7 @@ void MotorGrafico::actualizar(float dt)
 
 void MotorGrafico::actualizarFisica(float dt)
 {
-    const int condenadosAlInicio = colaEliminacion.longitud();
-    encolarCondenados();
+    tiempoSimulacion += dt;
 
     // 1. Control del ciclo de estaciones
     temporizadorEstacion += dt;
@@ -427,22 +475,20 @@ void MotorGrafico::actualizarFisica(float dt)
         procesarSimulacionGeneral(dt);
     }
 
-    // 3. Desgaste de vida por la estación actual y muerte
+    // 3. Envejecimiento constante, desgaste de vida por estación y cooldowns
     for (int i = 0; i < poblacion.longitud(); ++i) {
         Bichito& b = poblacion.obtenerRef(i);
-        if (!b.estaCondenado())
-        {
-            b.cambiarVida(-(estacionActual.desgasteVida * 0.5f * dt));
+        b.envejecer(dt);
+        b.cambiarVida(-(estacionActual.desgasteVida * 0.5f * dt));
 
-            if (b.getCooldownReproduccion() > 0.0f) {
-                b.setCooldownReproduccion(b.getCooldownReproduccion() - dt);
-            }
-
+        if (b.getCooldownReproduccion() > 0.0f) {
+            b.setCooldownReproduccion(b.getCooldownReproduccion() - dt);
         }
     }
 
-    encolarCondenados();
-    procesarColaEliminacion(condenadosAlInicio);
+    // 4. Muerte por hambre (vida == 0, aplica a todos incluidos inmortales) y por vejez (Min-Heap)
+    procesarMuertesPorHambre();
+    procesarMuertesPorVejez();
 }
 
 void MotorGrafico::procesarEscenarioCompetencia(float dt)
@@ -583,17 +629,14 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
         temporizadorComida = 0.0f;
     }
 
-    // Actualización física de bichitos
-    for (int i = 0; i < poblacion.longitud(); ++i) {
+    // Actualización física de bichitos (y registro de recién nacidos en la cola de vejez)
+    const int poblacionAntes = poblacion.longitud();
+    for (int i = 0; i < poblacionAntes; ++i) {
         Bichito &bichito = poblacion.obtenerRef(i);
-        if (bichito.estaCondenado())
-        {
-            bichito.actualizarSoloPaseo(dt);
-        }
-        else
-        {
-            bichito.actualizar(dt, comidasActivas, poblacion, indicesBichitos);
-        }
+        bichito.actualizar(dt, comidasActivas, poblacion, indicesBichitos);
+    }
+    for (int i = poblacionAntes; i < poblacion.longitud(); ++i) {
+        registrarEnColaVejez(poblacion.obtenerRef(i));
     }
     
     // La comida consumida se elimina del arreglo dinámico y no se recicla en la bolsa.
@@ -745,9 +788,29 @@ void MotorGrafico::dibujarAlertaDesastre(sf::RenderTarget& destino, GestorRecurs
     centrarTexto(txtTitulo, cx, cy - 10.0f);
     destino.draw(txtTitulo);
 
-    // 5. Subtítulo con bajas totales
-    const std::string bajasStr = "LA PARCA ELIMINÓ " + std::to_string(alertaDesastre.bajasReales) + " BICHITOS";
-    sf::Text txtBajas(utf8(bajasStr), recursos.fuente(), 20);
+    // 5. Subtítulo específico según el desastre ocurrido
+    const std::string nStr = std::to_string(alertaDesastre.bajasReales);
+    std::string bajasStr;
+    switch (alertaDesastre.tipo)
+    {
+    case TipoDesastre::Meteoritos:
+        bajasStr = "LOS METEORITOS HAN ELIMINADO " + nStr + " BICHITOS";
+        break;
+    case TipoDesastre::Diluvio:
+        bajasStr = "EL DILUVIO HA ELIMINADO " + nStr + " BICHITOS";
+        break;
+    case TipoDesastre::BombaNuclear:
+        bajasStr = "LA BOMBA NUCLEAR HA ELIMINADO " + nStr + " BICHITOS";
+        break;
+    case TipoDesastre::PatriaMilagro:
+        bajasStr = "ABELARDO ELIMINÓ A " + nStr + " GUERRILLEROS (BICHITOS)";
+        break;
+    case TipoDesastre::Sobrepoblacion:
+    default:
+        bajasStr = "LA PARCA ELIMINÓ " + nStr + " BICHITOS";
+        break;
+    }
+    sf::Text txtBajas(utf8(bajasStr), recursos.fuente(), 18);
     txtBajas.setFillColor(sf::Color(255, 225, 190, alphaTexto));
     txtBajas.setOutlineColor(sf::Color(0, 0, 0, alphaTexto));
     txtBajas.setOutlineThickness(2.0f);
