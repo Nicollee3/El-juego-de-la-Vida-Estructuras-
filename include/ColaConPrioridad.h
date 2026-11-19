@@ -1,131 +1,155 @@
-
 /*
- * @file ColaPrioridad.h
- * @brief Cola de prioridad de Bichitos con 4 niveles fijos.
- * @details Es un arreglo FIJO de 4 objetos Cola; cada Cola es un nivel de prioridad.
- *          El nivel de un bichito depende de su VIDA en el momento de insertarlo
- *          (el nivel 0 es el de mayor prioridad):
- *              0: vida <= 0   (muerto)
- *              1: vida <  7   (crítico)
- *              2: vida <  20  ( muy hambriento)
- *              3: vida < 30  (hambriento)
+ * @file ColaConPrioridad.h
+ * @brief Cola de prioridad de "The Reaper" con 3 niveles fijos de mortandad.
+ * @details Arreglo FIJO de 3 objetos Cola<int> (almacena IDs de bichitos).
+ *          El nivel de prioridad se determina a partir de PerfilReaper
+ *          (nivel 0 = mayor prioridad, muere primero):
+ *              0 (Nivel 1 - Crítico):    poca vida, enfermos o viejitos.
+ *              1 (Nivel 2 - Intermedio): jóvenes y adultos sanos.
+ *              2 (Nivel 3 - Protegido):  inmunes y recién nacidos.
+ *          Los bichitos inmortales no se encolan.
  *          Dentro de un mismo nivel sale primero el que llegó primero (FIFO).
  *              insertar           O(1)
- *              eliminar_primero   O(1)  
+ *              eliminar_primero   O(1)
  *              ver_primero        O(1)
- * @author Karoll Ramírez
- * @date Octubre 2026
  */
 
 #ifndef COLA_PRIORIDAD_H
 #define COLA_PRIORIDAD_H
 
 #include "Cola.h"
-#include "Bichito.h"
 
-    /*
-     * @class ColaPrioridad
-     * @brief Cola con prioridad de 4 niveles. Cada nivel es una Cola de Bichitos.
-     */
-    class ColaPrioridad
+/*
+ * @struct PerfilReaper
+ * @brief Vista desacoplada de los atributos vitales de un Bichito usados por The Reaper.
+ * @details Permite clasificar a los bichitos sin acoplar directamente la cola a los
+ *          atributos de genética (Parte 1) mientras se integran las ramas.
+ */
+struct PerfilReaper
 {
+    int id = -1;
+    float vida = 0.0f;
+    float edad = 0.0f;
+    bool enfermo = false;
+    bool inmune = false;
+    bool inmortal = false;
+};
+
+/*
+ * @class ColaPrioridad
+ * @brief Cola con prioridad de 3 niveles para The Reaper (Gestor de Mortandad).
+ */
+class ColaPrioridad
+{
+public:
+    static constexpr int NUM_NIVELES = 3;
+
+    // Umbrales de clasificación de The Reaper
+    static constexpr float UMBRAL_POCA_VIDA = 25.0f;
+    static constexpr float EDAD_RECIEN_NACIDO = 10.0f;
+    static constexpr float EDAD_VIEJO = 60.0f;
+
 private:
-    Cola<Bichito> niveles[4]; // Arreglo FIJO de 4 colas (una por nivel)
+    Cola<int> niveles[NUM_NIVELES]; // 0: mueren primero, 1: intermedio, 2: mueren al final
     int N;
 
 public:
-    /*
-     * @brief Construye una cola de prioridad vacía.
-     */
-    ColaPrioridad()
-    {
-        N = 0;
-    }
+    ColaPrioridad() : N(0) {}
 
     /*
-     * @brief Dice en qué nivel (0 a 3) cae una vida dada.
-     * @param vida Vida del bichito.
-     * @return int El número del nivel.
+     * @brief Calcula el nivel de prioridad (0 a 2) para un perfil de bichito.
+     * @param perfil Datos vitales del bichito.
+     * @return int 0 (máxima prioridad), 1 (intermedio) o 2 (mínima prioridad).
      */
-    static int nivelDe(float vida)
+    static int nivelDe(const PerfilReaper &perfil)
     {
-        if (vida <= 0)
+        // Si ya no tiene vida, siempre es prioridad máxima.
+        if (perfil.vida <= 0.0f)
             return 0;
-        if (vida < 7)
-            return 1;
-        if (vida < 20)
+
+        // Los inmunes van en el último nivel de prioridad.
+        if (perfil.inmune)
             return 2;
-        return 3;
+
+        // Nivel 1 (índice 0): poca vida, enfermos o viejitos.
+        if (perfil.vida < UMBRAL_POCA_VIDA || perfil.enfermo || perfil.edad >= EDAD_VIEJO)
+            return 0;
+
+        // Nivel 3 (índice 2): recién nacidos sanos.
+        if (perfil.edad <= EDAD_RECIEN_NACIDO)
+            return 2;
+
+        // Nivel 2 (índice 1): jóvenes y adultos sanos.
+        return 1;
     }
 
-    /*
-     * @brief Verifica si la cola de prioridad está vacía.
-     */
-    bool esvacia() const
-    {
-        return N == 0;
-    }
+    bool esvacia() const { return N == 0; }
 
-    /*
-     * @brief Cantidad total de bichitos en todos los niveles. O(1).
-     */
-    int longitud() const
-    {
-        return N;
-    }
+    int longitud() const { return N; }
 
-    /*
-     * @brief Cantidad de bichitos que hay en un nivel (sirve para estadísticas).
-     * @param nivel Número del nivel (0 a 3). Si es inválido devuelve 0.
-     */
     int longitudNivel(int nivel) const
     {
-        if (nivel < 0 || nivel >= 4)
+        if (nivel < 0 || nivel >= NUM_NIVELES)
             return 0;
         return niveles[nivel].longitud();
     }
 
     /*
-     * @brief Inserta una copia del bichito al final de la cola del nivel que le corresponde según su vida. O(1).
-     * @param b Bichito a insertar.
+     * @brief Inserta el ID de un bichito en el nivel que le corresponde. O(1).
+     * @return true si fue encolado, false si es inmortal (exento del Reaper).
      */
-    void insertar(const Bichito &b)
+    bool insertar(const PerfilReaper &perfil)
     {
-        niveles[nivelDe(b.getVida())].insertar_al_ultimo(b);
-        N++;
+        if (perfil.inmortal)
+            return false;
+
+        const int nivel = nivelDe(perfil);
+        niveles[nivel].insertar_al_ultimo(perfil.id);
+        ++N;
+        return true;
     }
 
     /*
-     * @brief Consulta el bichito de mayor prioridad SIN sacarlo.
-     * @param salida Aquí se guarda una copia del bichito.
-     * @return false si la cola de prioridad estaba vacía.
+     * @brief Consulta el ID del bichito de mayor prioridad sin extraerlo. O(1).
      */
-    bool ver_primero(Bichito &salida) const
+    bool ver_primero(int &idSalida) const
     {
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < NUM_NIVELES; ++i)
         {
-            if (niveles[i].ver_primero(salida))
+            if (niveles[i].ver_primero(idSalida))
                 return true;
         }
         return false;
     }
 
     /*
-     * @brief Saca el bichito de mayor prioridad: el primero del nivel más bajo que tenga bichitos.
-     * @param salida Aquí se guarda el bichito extraído.
-     * @return false si la cola de prioridad estaba vacía.
+     * @brief Extrae el ID del bichito de mayor prioridad y reporta de qué nivel salió. O(1).
      */
-    bool eliminar_primero(Bichito &salida)
+    bool eliminar_primero(int &idSalida, int *nivelSalida = nullptr)
     {
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < NUM_NIVELES; ++i)
         {
-            if (niveles[i].eliminar_primero(salida))
+            if (niveles[i].eliminar_primero(idSalida))
             {
-                N--;
+                --N;
+                if (nivelSalida != nullptr)
+                    *nivelSalida = i;
                 return true;
             }
         }
         return false;
+    }
+
+    /*
+     * @brief Vacía todos los niveles de la cola.
+     */
+    void vaciar()
+    {
+        for (int i = 0; i < NUM_NIVELES; ++i)
+        {
+            niveles[i].vaciar();
+        }
+        N = 0;
     }
 };
 

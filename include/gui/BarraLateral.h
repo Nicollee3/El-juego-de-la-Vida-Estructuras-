@@ -46,9 +46,11 @@ private:
     Etiqueta lineaBichitos_;
     Etiqueta lineaComida_;
     Etiqueta lineaArreglo_;
+    Etiqueta lineaDesastre_;
     Etiqueta etVelocidad_;
     Etiqueta etBichitos_;
     Etiqueta etPrioridad_;
+    Etiqueta etDesastres_;
     Etiqueta etAyuda_;
 
     int indiceVelocidad_;

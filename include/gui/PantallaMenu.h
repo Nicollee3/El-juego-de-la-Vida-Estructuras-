@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <vector>
+#include <SFML/Graphics.hpp>
 #include "gui/Boton.h"
 #include "gui/Etiqueta.h"
 #include "gui/Pantalla.h"
@@ -22,12 +23,28 @@ public:
     void dibujar(sf::RenderTarget& destino) override;
 
 private:
+    struct ParticulaFondo
+    {
+        float x = 0.0f;
+        float y = 0.0f;
+        float vx = 0.0f;
+        float vy = 0.0f;
+        float radio = 6.0f;
+        float fase = 0.0f;
+        sf::Color color;
+        bool esComida = false;
+    };
+
     void moverFoco(int delta);
     void actualizarFoco();
+    void inicializarFondoAnimado();
 
     Etiqueta titulo_;
+    Etiqueta subtitulo_;
     Etiqueta ayuda_;
     std::vector<std::unique_ptr<Boton>> botones_;
+    std::vector<ParticulaFondo> particulas_;
+    float tiempo_;
     int enfocado_; // botón resaltado con el teclado (-1 = ninguno)
 };
 

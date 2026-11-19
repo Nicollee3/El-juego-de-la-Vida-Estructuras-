@@ -1,6 +1,7 @@
 # Directorios de build y archivos generados por CMake
 /build/
 /out/
+/dist/
 /cmake-build-*/
 CMakeFiles/
 CMakeCache.txt

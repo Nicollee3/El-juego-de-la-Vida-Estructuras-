@@ -32,6 +32,7 @@ public:
     void setHabilitado(bool habilitado);
     void setEnfocado(bool enfocado);         // navegación con teclado: se ve igual que hover
     void setSeleccionado(bool seleccionado); // se ve "hundido" (para opciones tipo 1/2/3)
+    void setColorTinte(sf::Color color);     // tinte opcional para distinguir acciones/desastres
     void activar();                          // simula un clic (teclado)
     sf::FloatRect getLimites() const;
 
@@ -54,6 +55,7 @@ private:
     bool habilitado_;
     bool enfocado_;
     bool seleccionado_;
+    sf::Color colorTinte_;
 };
 
 #endif

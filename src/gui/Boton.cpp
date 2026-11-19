@@ -13,7 +13,8 @@ Boton::Boton(GestorRecursos& recursos, const std::string& texto, sf::Vector2f ce
       estadoMouse_(Estado::Normal),
       habilitado_(true),
       enfocado_(false),
-      seleccionado_(false)
+      seleccionado_(false),
+      colorTinte_(sf::Color::White)
 {
     ajustarTexto();
     aplicarEstado();
@@ -52,13 +53,18 @@ sf::FloatRect Boton::getLimites() const
 
 void Boton::ajustarTexto()
 {
-    // Si el texto no cabe, se reduce de 24 a 16 y de 16 a 8 hasta que quepa.
-    const float maximo = getLimites().width - 2.0f * Config::ESCALA_PIXEL * 3.0f;
-    unsigned int tam = 24;
+    // Ajusta el tamaño suavemente (de 1 en 1) para que el texto siempre tenga buen margen
+    // tanto horizontal como vertical y nunca salte bruscamente a letras diminutas.
+    const sf::FloatRect lim = getLimites();
+    const float maxAncho = lim.width - 16.0f;
+    unsigned int tam = static_cast<unsigned int>(lim.height * 0.45f);
+    if (tam > 22) tam = 22;
+    if (tam < 11) tam = 11;
+
     etiqueta_.setTamano(tam);
-    while (etiqueta_.getAncho() > maximo && tam > 8)
+    while (etiqueta_.getAncho() > maxAncho && tam > 10)
     {
-        tam -= 8;
+        --tam;
         etiqueta_.setTamano(tam);
     }
 }
@@ -118,7 +124,10 @@ void Boton::dibujar(sf::RenderTarget& destino) const
     sprite.setOrigin(tex.getSize().x / 2.0f, tex.getSize().y / 2.0f); // origen al centro de la imagen
     sprite.setScale(Config::ESCALA_PIXEL, Config::ESCALA_PIXEL);
     sprite.setPosition(centro_);
-    if (!habilitado_) sprite.setColor(sf::Color(130, 130, 130)); // oscurecido si está deshabilitado
+    if (!habilitado_)
+        sprite.setColor(sf::Color(130, 130, 130));
+    else
+        sprite.setColor(colorTinte_);
 
     destino.draw(sprite);
     etiqueta_.dibujar(destino);
@@ -154,6 +163,11 @@ void Boton::setSeleccionado(bool seleccionado)
 {
     seleccionado_ = seleccionado;
     aplicarEstado();
+}
+
+void Boton::setColorTinte(sf::Color color)
+{
+    colorTinte_ = color;
 }
 
 void Boton::activar()

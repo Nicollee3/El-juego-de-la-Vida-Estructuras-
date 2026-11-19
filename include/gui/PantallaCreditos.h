@@ -25,6 +25,7 @@ private:
     Etiqueta titulo_;
     std::vector<Etiqueta> lineas_;
     std::unique_ptr<Boton> volver_;
+    float tiempo_;
 };
 
 #endif

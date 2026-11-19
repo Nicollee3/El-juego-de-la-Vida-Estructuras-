@@ -3,11 +3,13 @@
 
 #include <array>
 #include <string>
+#include <vector>
 #include <SFML/Graphics.hpp>
 #include "ArregloDinamico.h"
 #include "Cola.h"
 #include "ColaCircular.h"
 #include "Diccionario.h"
+#include "MotorDesastres.h"
 
 class GestorRecursos; // declaración adelantada
 
@@ -25,6 +27,7 @@ private:
     Diccionario<int> indicesComida;
     Cola<int> colaEliminacion;
     ColaCircular estaciones;
+    MotorDesastres motorDesastres;
     std::array<int, 10> bolsaComida;
     int indiceBolsaComida;
 
@@ -34,6 +37,26 @@ private:
 
     float temporizadorComida;
     float intervaloComida;
+
+    // Alerta visual central y efectos ambientales / de desastre
+    struct ParticulaClima
+    {
+        float x = 0.0f;
+        float y = 0.0f;
+        float vx = 0.0f;
+        float vy = 0.0f;
+        float tam = 4.0f;
+        float rotacion = 0.0f;
+        float velRot = 0.0f;
+        float fase = 0.0f;
+        int variante = 0;
+    };
+
+    ResultadoDesastre alertaDesastre;
+    float tiempoAlertaDesastre;
+    float duracionAlertaDesastre;
+    float tiempoVisual;
+    std::vector<ParticulaClima> particulasClima;
 
     // Estado que controla la barra lateral
     bool pausado;
@@ -50,6 +73,7 @@ private:
     void procesarColaEliminacion(int elementosPendientes);
     void agregarBichitoAlFinal(Bichito bichito);
     void eliminarBichitoEn(int indice, bool retirarDeCola = true);
+    void eliminarBichitoPorId(int id);
     void vaciarPoblacion();
     void eliminarComidaEn(int indice);
     void vaciarComidas();
@@ -57,6 +81,12 @@ private:
     void mezclarBolsaComida();
     int obtenerRarezaSiguiente();
     float calcularIntervaloComida(const std::string& nombreEstacion);
+    void mostrarAlertaDesastre(const ResultadoDesastre& resultado);
+    void dibujarAlertaDesastre(sf::RenderTarget& destino, GestorRecursos& recursos) const;
+    void inicializarParticulasClima();
+    void actualizarEfectosClima(float dt);
+    void dibujarEfectosEstacion(sf::RenderTarget& destino, const std::string& estacion) const;
+    void dibujarAnimacionDesastre(sf::RenderTarget& destino) const;
 
 public:
     // CAMBIO: recibe el tamaño del mundo en vez de crear la ventana.
@@ -90,6 +120,11 @@ public:
 
     void agregarBichito();
     void quitarBichito();
+
+    // ---------- Desastres Naturales y The Reaper ----------
+    ResultadoDesastre activarDesastre(TipoDesastre tipo);
+    MotorDesastres& getMotorDesastres() { return motorDesastres; }
+    std::string getResumenUltimoDesastre() const { return motorDesastres.getResumenUltimoDesastre(); }
 
     // ---------- NUEVO: información para mostrar ----------
     ModoSimulacion getModo() const { return modoActual; }
