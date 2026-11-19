@@ -20,22 +20,32 @@ namespace
     }
 }
 
-// --- CONSTRUCTORES ---
+
 Bichito::Bichito() 
     : id(0), vida(30.0f), edadActual(0.0f), edadMaxima(generarEdadMaximaAleatoria()), inmortal(false),
-      x(0.0f), y(0.0f), targetX(0.0f), targetY(0.0f),
-      velocidad(120.0f), estado(EstadoBichito::BuscandoComida),
-      tiempoCercaPareja(0.0f), idParejaObjetivo(-1), cooldownReproduccion(0.0f), 
-      siguiendoComida(false), condenado(false){}
+    x(0.0f), y(0.0f), targetX(0.0f), targetY(0.0f),
+    velocidad(120.0f), estado(EstadoBichito::BuscandoComida),
+    tiempoCercaPareja(0.0f), idParejaObjetivo(-1), cooldownReproduccion(0.0f), 
+    siguiendoComida(false), condenado(false)
+{
+    // NUEVO: Codigo genetico
+    genetica = Genoma(120.0f); // Inicializa genética con la velocidad base de tus compañeros
+}
 
-Bichito::Bichito(int _id, float _vida, float _x, float _y) 
+// Nota: Los valores por defecto se definen en el .h, aquí solo recibimos los parámetros
+Bichito::Bichito(int _id, float _vida, float _x, float _y, Genoma _genes) 
     : id(_id), vida(_vida), edadActual(0.0f), edadMaxima(generarEdadMaximaAleatoria()), inmortal(false),
-      x(_x), y(_y), targetX(_x), targetY(_y),
-      velocidad(120.0f), estado(EstadoBichito::BuscandoComida),
-      tiempoCercaPareja(0.0f), idParejaObjetivo(-1), cooldownReproduccion(0.0f), 
-      siguiendoComida(false), condenado(false) {}
+    x(_x), y(_y), targetX(_x), targetY(_y),
+    velocidad(120.0f), estado(EstadoBichito::BuscandoComida),
+    tiempoCercaPareja(0.0f), idParejaObjetivo(-1), cooldownReproduccion(0.0f), 
+    siguiendoComida(false), condenado(false), 
+    genetica(_genes) // --- NUEVO CÓDIGO GENÉTICO ---
+{
+    // Aseguramos que la velocidad del bichito empate con su genoma inicial
+    setVelocidad(_genes.velocidad > 0.0f ? _genes.velocidad : 120.0f); 
+}
 
-// --- SETTERS CON LÓGICA ---
+
 void Bichito::setEdadMaxima(float _edadMax) {
     edadMaxima = std::max(EDAD_MAXIMA_MIN, std::min(_edadMax, EDAD_MAXIMA_MAX));
 }
@@ -69,8 +79,20 @@ bool Bichito::condenar()
     return true;
 }
 
-// --- MÉTODOS PRIVADOS ---
+//  MÉTODOS PRIVADOS 
 void Bichito::evaluarEstado() {
+    // --- NUEVO CÓDIGO GENÉTICO: INTERCEPCIÓN CANÍBAL ---
+    // Si la vida baja y el bicho tiene el gen caníbal, ignora la comida y se pone a cazar
+    if (vida < 100.0f && (genetica.genEstatico1 == GenEstatico::CANIBALISMO || genetica.genEstatico2 == GenEstatico::CANIBALISMO)) {
+        if (estado != EstadoBichito::Cazando) {
+            estado = EstadoBichito::Cazando;
+            setVelocidad(120.0f);
+            siguiendoComida = false;
+        }
+        return; // Salimos para no ejecutar los estados normales de comida o paseo
+    }
+    
+
     EstadoBichito nuevoEstado;
 
     if(estado == EstadoBichito::BuscandoComida && vida < 100){
@@ -78,16 +100,12 @@ void Bichito::evaluarEstado() {
     }
 
     if (vida > 90){
-        // setVelocidad(60.0f);
         nuevoEstado = EstadoBichito::DePaseo;
     } else if (vida > 70){
-        // setVelocidad(120.0f);
         nuevoEstado = EstadoBichito::BuscandoPareja;
     } else if (vida > 50){
-        // setVelocidad(120.0f);
         nuevoEstado = EstadoBichito::DePaseo;
     }else{
-        // setVelocidad(120.0f);
         nuevoEstado = EstadoBichito::BuscandoComida;
     }
 
@@ -148,7 +166,7 @@ void Bichito::buscarComida(ArregloDinamico<Comida>& comidas, Diccionario<int>& i
 }
 
 void Bichito::buscarPareja(ArregloDinamico<Bichito>& poblacion,
-                           Diccionario<int>& indices, float dt) {
+                        Diccionario<int>& indices, float dt) {
     int idxPareja = -1;
     float minDist = 999999.0f;
 
@@ -175,7 +193,6 @@ void Bichito::buscarPareja(ArregloDinamico<Bichito>& poblacion,
         Bichito& pareja = poblacion.obtenerRef(idxPareja);
         setTarget(pareja.getX(), pareja.getY());
 
-        // Si están a distancia 
         if (minDist <= 35.0f) {
             tiempoCercaPareja += dt;
 
@@ -192,8 +209,7 @@ void Bichito::buscarPareja(ArregloDinamico<Bichito>& poblacion,
 }
 
 void Bichito::reproducirseCon(Bichito& pareja, ArregloDinamico<Bichito>& poblacion,
-                              Diccionario<int>& indices) {
-    // 1. Calcular las coordenadas y crear la instancia del hijo
+                            Diccionario<int>& indices) {
     float hijoX = (this->x + pareja.getX()) / 2.0f;
     float hijoY = (this->y + pareja.getY()) / 2.0f;
 
@@ -202,8 +218,15 @@ void Bichito::reproducirseCon(Bichito& pareja, ArregloDinamico<Bichito>& poblaci
     {
         ++nuevoId;
     }
-    Bichito hijo(nuevoId, 40.0f, hijoX, hijoY);
-    // Herencia de esperanza de vida por linaje con ligera variación generacional (+/- 15%)
+    
+    //  NUEVO CÓDIGO GENÉTICO: Herencia al reproducirse
+    // (Por ahora heredamos genes básicos, luego perfeccionamos la mutación)
+    Genoma genHijo((this->genetica.velocidad + pareja.getGenetica().velocidad) / 2.0f, 
+                    this->genetica.genEstatico1, pareja.getGenetica().genEstatico2);
+
+    Bichito hijo(nuevoId, 40.0f, hijoX, hijoY, genHijo);
+    
+
     const float promedioEdadMax = (this->edadMaxima + pareja.getEdadMaxima()) * 0.5f;
     const float factorMutacion = 0.85f + 0.30f * (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX));
     hijo.setEdadActual(0.0f);
@@ -211,23 +234,20 @@ void Bichito::reproducirseCon(Bichito& pareja, ArregloDinamico<Bichito>& poblaci
     hijo.setInmortal(this->inmortal || pareja.esInmortal());
     hijo.setTarget(hijoX + (rand() % 100 - 50), hijoY + (rand() % 100 - 50));
 
-    // 2. Modificar a los padres
     this->cambiarVida(-30.0f);
     pareja.cambiarVida(-30.0f);
 
     this->tiempoCercaPareja = 0.0f;
     pareja.setTiempoCercaPareja(0.0f);
 
-    this->cooldownReproduccion = 10.0f; // 10 segundos sin reproducirse
+    this->cooldownReproduccion = 10.0f; 
     pareja.setCooldownReproduccion(10.0f);
 
-    // 3. Insertar al hijo al final
     poblacion.generar(hijo);
     indices.insertar(nuevoId, poblacion.longitud() - 1);
 }
 
 void Bichito::pasear() {
-    
     float dx = targetX - x;
     float dy = targetY - y;
     float dist = std::sqrt(dx * dx + dy * dy);
@@ -251,7 +271,6 @@ void Bichito::destinoAleatorio() {
     targetY = minY + (static_cast<float>(rand()) / RAND_MAX) * rangoY;
 }
 
-// --- MÉTODOS PÚBLICOS DE MOVIMIENTO Y ACTUALIZACIÓN ---
 void Bichito::moverHaciaObjetivo(float dt) {
     float dx = targetX - x;
     float dy = targetY - y;
@@ -278,6 +297,16 @@ void Bichito::actualizar(float dt, ArregloDinamico<Comida>& comidas, Diccionario
         return;
     }
 
+    // NUEVO: Desgaste metabolico de acuerdo a la velocidad 
+    // En vez de bajar vida de golpe cada cierto tiempo, lo hace fluido
+    vida -= (genetica.metabolismo * dt * 0.05f); // 0.05f es un factor para que no mueran en un segundo
+    
+    // Validar inmortalidad
+    if (vida <= 0.0f && genetica.genEstatico1 == GenEstatico::INMORTAL) {
+        vida = 1.0f; // Los inmortales no mueren por metabolismo
+    }
+
+
     evaluarEstado();
 
     switch (estado) {
@@ -290,7 +319,61 @@ void Bichito::actualizar(float dt, ArregloDinamico<Comida>& comidas, Diccionario
         case EstadoBichito::DePaseo:
             pasear();
             break;
+        // --- NUEVO CÓDIGO GENÉTICO: ESTADO CAZANDO ---
+        case EstadoBichito::Cazando:
+            buscarPresa(poblacion, indices);
+            break;
+
     }
 
     moverHaciaObjetivo(dt);
+}
+
+// NUEVO: Implementacion del canibalismo
+void Bichito::buscarPresa(ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices) {
+    if (poblacion.longitud() <= 1) {
+        pasear(); // Si está solo en el mundo, mejor pasea
+        return;
+    }
+
+    float distanciaMinima = 99999.0f;
+    int indexPresa = -1;
+
+    // 1. Busca al bichito vivo más cercano (Sin importar parentesco, según diseño)
+    for (int i = 0; i < poblacion.longitud(); ++i) {
+        Bichito& posiblePresa = poblacion.obtenerRef(i);
+        
+        if (posiblePresa.getId() == this->id || posiblePresa.getVida() <= 0.0f) continue;
+
+        float dx = posiblePresa.getX() - this->x;
+        float dy = posiblePresa.getY() - this->y;
+        float dist = std::sqrt(dx * dx + dy * dy);
+
+        if (dist < distanciaMinima) {
+            distanciaMinima = dist;
+            indexPresa = i;
+        }
+    }
+
+    // 2. Persigue o ataca a la presa
+    if (indexPresa != -1) {
+        Bichito& presa = poblacion.obtenerRef(indexPresa);
+        setTarget(presa.getX(), presa.getY()); // Lo sigue
+
+        if (distanciaMinima < 15.0f) { // Colisión para atacar
+            bool presaInmune = (presa.getGenetica().genEstatico1 == GenEstatico::INMUNIDAD || 
+                                presa.getGenetica().genEstatico2 == GenEstatico::INMUNIDAD);
+            
+            if (!presaInmune) {
+                // Drena la vida y mata a la presa
+                this->cambiarVida(presa.getVida());
+                presa.setVida(0); 
+            } else {
+                // Si la presa es inmune, el bicho huye o rebota un poco
+                setTarget(x + (rand() % 100 - 50), y + (rand() % 100 - 50));
+            }
+        }
+    } else {
+        pasear();
+    }
 }
