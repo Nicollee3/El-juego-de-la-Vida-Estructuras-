@@ -43,7 +43,7 @@ BarraLateral::BarraLateral(GestorRecursos& recursos, MotorGrafico& motor, std::f
       lineaDesastre_(recursos, "", 12, sf::Vector2f(X0 + MARGEN, 122)),
       etVelocidad_(recursos, "", 14, sf::Vector2f(CX, 222), Etiqueta::Alineacion::Centro),
       etBichitos_(recursos, "Bichitos", 14, sf::Vector2f(CX, 310), Etiqueta::Alineacion::Centro),
-      etPrioridad_(recursos, "Tamaño de comida:", 13, sf::Vector2f(CX, 344), Etiqueta::Alineacion::Centro),
+      etPrioridad_(recursos, "Tipo de comida:", 13, sf::Vector2f(CX, 344), Etiqueta::Alineacion::Centro),
       etDesastres_(recursos, "DESASTRES · LA PARCA", 13, sf::Vector2f(CX, 432), Etiqueta::Alineacion::Centro),
       etAyuda_(recursos, "Espacio=pausa  Esc=menú", 12, sf::Vector2f(CX, 616), Etiqueta::Alineacion::Centro),
       indiceVelocidad_(1) // empieza en 1x
