@@ -637,11 +637,22 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
         temporizadorComida = 0.0f;
     }
 
+    // CAMBIO: Reconstruir el R-Tree con las comidas activas actuales
+    
+    rtreeComida.limpiar();
+    for (int i = 0; i < comidasActivas.longitud(); ++i) {
+        const Comida& c = comidasActivas.obtenerRef(i);
+        if (c.isActiva()) {
+            rtreeComida.insertar(c.getId(), c.getX(), c.getY());
+        }
+    }
+
     // Actualización física de bichitos (y registro de recién nacidos en la cola de vejez)
     const int poblacionAntes = poblacion.longitud();
     for (int i = 0; i < poblacionAntes; ++i) {
         Bichito &bichito = poblacion.obtenerRef(i);
-        bichito.actualizar(dt, comidasActivas, poblacion, indicesBichitos);
+        // NUEVO: Se pasan indicesComida y rtreeComida al método actualizar
+        bichito.actualizar(dt, comidasActivas, indicesComida, rtreeComida, poblacion, indicesBichitos);
     }
     for (int i = poblacionAntes; i < poblacion.longitud(); ++i) {
         registrarEnColaVejez(poblacion.obtenerRef(i));

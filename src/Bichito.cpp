@@ -5,6 +5,7 @@
 #include "ArregloDinamico.h"
 #include "Diccionario.h"
 #include "gui/Config.h"
+#include "RTree.h"
 
 namespace
 {
@@ -102,18 +103,27 @@ void Bichito::evaluarEstado() {
     }
 }
 
-void Bichito::buscarComida(ArregloDinamico<Comida>& comidas) {
+void Bichito::buscarComida(ArregloDinamico<Comida>& comidas, Diccionario<int>& indicesComida, const RTree& rtreeComida) {
     int idxCercano = -1;
     float minDist = 999999.0f;
 
-    for (int j = 0; j < comidas.longitud(); ++j) {
-        if (!comidas.obtenerRef(j).isActiva()) continue;
-        float dx = comidas.obtenerRef(j).getX() - x;
-        float dy = comidas.obtenerRef(j).getY() - y;
+    // 1. Consulta espacial en el R-Tree (solo devuelve IDs cercanos, no todo el mapa)
+    std::vector<int> idsCercanos = rtreeComida.buscarCercanas(x, y, RANGO_DETECCION_COMIDA);
+
+    // 2. Buscamos en O(1) usando el Diccionario de comidas
+    for (int idComida : idsCercanos) {
+        int idx = -1;
+        if (!indicesComida.buscar(idComida, idx)) continue;
+
+        Comida& c = comidas.obtenerRef(idx);
+        if (!c.isActiva()) continue;
+
+        float dx = c.getX() - x;
+        float dy = c.getY() - y;
         float dist = std::sqrt(dx * dx + dy * dy);
         if (dist <= RANGO_DETECCION_COMIDA && dist < minDist) {
             minDist = dist;
-            idxCercano = j;
+            idxCercano = idx;
         }
     }
 
@@ -122,7 +132,6 @@ void Bichito::buscarComida(ArregloDinamico<Comida>& comidas) {
         setTarget(masCercana.getX(), masCercana.getY());
         siguiendoComida = true;
 
-        // Comer si está al alcance
         if (minDist <= 15.0f) {
             cambiarVida(static_cast<float>(masCercana.getPuntosDeVida()));
             masCercana.setActiva(false);
@@ -130,10 +139,9 @@ void Bichito::buscarComida(ArregloDinamico<Comida>& comidas) {
             destinoAleatorio();
         }
     } else {
-        // Si no hay comida activa o estaba persiguiendo una que ya no existe:
         if (siguiendoComida) {
             siguiendoComida = false;
-            destinoAleatorio(); // Reacciona de inmediato cambiando de destino
+            destinoAleatorio();
         }
         pasear();
     }
@@ -263,10 +271,9 @@ void Bichito::actualizarSoloPaseo(float dt)
     moverHaciaObjetivo(dt);
 }
 
-void Bichito::actualizar(float dt, ArregloDinamico<Comida>& comidas,
-                         ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices) {
-    if (condenado)
-    {
+void Bichito::actualizar(float dt, ArregloDinamico<Comida>& comidas, Diccionario<int>& indicesComida,
+                        const RTree& rtreeComida, ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices) {
+    if (condenado) {
         actualizarSoloPaseo(dt);
         return;
     }
@@ -275,7 +282,7 @@ void Bichito::actualizar(float dt, ArregloDinamico<Comida>& comidas,
 
     switch (estado) {
         case EstadoBichito::BuscandoComida:
-            buscarComida(comidas);
+            buscarComida(comidas, indicesComida, rtreeComida);
             break;
         case EstadoBichito::BuscandoPareja:
             buscarPareja(poblacion, indices, dt);

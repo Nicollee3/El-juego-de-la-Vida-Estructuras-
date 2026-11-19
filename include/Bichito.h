@@ -17,6 +17,7 @@ template <typename T>
 class Diccionario;
 template <typename T>
 class ArregloDinamico;
+class RTree;
 
 /*
  * @enum EstadoBichito
@@ -63,10 +64,10 @@ private:
      * @brief Genera un x,y aleatorio para pasear()
      */
     void destinoAleatorio();
-    void buscarComida(ArregloDinamico<Comida>& comidas);
+    void buscarComida(ArregloDinamico<Comida>& comidas, Diccionario<int>& indicesComida, const RTree& rtreeComida);
     void buscarPareja(ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices, float dt);
     void reproducirseCon(Bichito& pareja, ArregloDinamico<Bichito>& poblacion,
-                         Diccionario<int>& indices);
+                        Diccionario<int>& indices);
 
 public:
     /*
@@ -132,8 +133,8 @@ public:
      * @details La vida NO baja aquí: el desgaste por segundo lo aplica el juego con cambiarVida(-1).
      * @param dt Incremento de tiempo transcurrido.
      */
-    void actualizar(float dt, ArregloDinamico<Comida>& comidas,
-                    ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices);
+void actualizar(float dt, ArregloDinamico<Comida>& comidas, Diccionario<int>& indicesComida,
+                const RTree& rtreeComida, ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices);S
     /*
      * @brief Incrementa o decrementa la vida actual del bichito de forma segura (siempre queda entre 0 y 200).
      * @param delta Cantidad de vida a sumar (positiva) o restar (negativa).

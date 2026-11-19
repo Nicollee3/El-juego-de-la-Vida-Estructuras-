@@ -10,6 +10,7 @@
 #include "ColaCircular.h"
 #include "Diccionario.h"
 #include "MotorDesastres.h"
+#include "RTree.h"
 
 class GestorRecursos; // declaración adelantada
 
@@ -21,6 +22,7 @@ private:
     // CAMBIO: ya no existe "sf::RenderWindow ventana". La ventana ahora es de la clase Aplicacion.
     // El motor solo necesita saber qué tan grande es el "mundo" donde viven los bichitos.
     sf::Vector2f tamanoMundo;
+    RTree rtreeComida;
     ArregloDinamico<Bichito>& poblacion;
     ArregloDinamico<Comida> comidasActivas;
     Diccionario<int> indicesBichitos;
