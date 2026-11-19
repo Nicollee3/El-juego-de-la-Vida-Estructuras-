@@ -30,6 +30,8 @@ private:
     ColaCircular estaciones;
     MotorDesastres motorDesastres;
     float tiempoSimulacion;
+    int muertesHambre;
+    int muertesVejez;
     std::array<int, 10> bolsaComida;
     int indiceBolsaComida;
 
@@ -139,6 +141,8 @@ public:
     int getNumBichitos() { return poblacion.longitud(); }
     int getNumComidas() const { return comidasActivas.longitud(); }
     int getCapacidadPoblacion() { return poblacion.capacidad(); }
+    int getMuertesHambre() const { return muertesHambre; }
+    int getMuertesVejez() const { return muertesVejez; }
 };
 
 #endif

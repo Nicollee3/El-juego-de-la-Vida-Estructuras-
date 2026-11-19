@@ -47,6 +47,7 @@ private:
     Etiqueta lineaComida_;
     Etiqueta lineaArreglo_;
     Etiqueta lineaDesastre_;
+    Etiqueta lineaMuertes_;
     Etiqueta etVelocidad_;
     Etiqueta etBichitos_;
     Etiqueta etPrioridad_;

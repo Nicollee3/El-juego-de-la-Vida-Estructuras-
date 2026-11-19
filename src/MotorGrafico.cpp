@@ -38,6 +38,7 @@ namespace
     }
 
     constexpr int POBLACION_INICIAL_GENERAL = 60;
+    constexpr float ANIOS_POR_SEGUNDO = 5.0f; // 20 años -> 4s, 200 años -> 40s, 400 años -> 80s
 
     sf::String utf8(const std::string& texto)
     {
@@ -78,6 +79,8 @@ MotorGrafico::MotorGrafico(ArregloDinamico<Bichito>& _poblacion, sf::Vector2f _t
     : tamanoMundo(_tamanoMundo),
     poblacion(_poblacion),
     tiempoSimulacion(0.0f),
+    muertesHambre(0),
+    muertesVejez(0),
     bolsaComida{{1, 2, 2, 3, 3, 3, 3, 3, 3, 3}},
     indiceBolsaComida(0),
     tiempoCambioEstacion(10.0f),
@@ -190,6 +193,8 @@ void MotorGrafico::vaciarPoblacion()
     colaEliminacion.vaciar();
     colaVejez.vaciar();
     tiempoSimulacion = 0.0f;
+    muertesHambre = 0;
+    muertesVejez = 0;
 }
 
 void MotorGrafico::registrarEnColaVejez(const Bichito& bichito)
@@ -198,8 +203,9 @@ void MotorGrafico::registrarEnColaVejez(const Bichito& bichito)
     if (bichito.esInmortal())
         return;
 
-    const float tiempoRestante = std::max(0.0f, bichito.getEdadMaxima() - bichito.getEdadActual());
-    colaVejez.insertar(bichito.getId(), tiempoSimulacion + tiempoRestante, bichito.getEdadMaxima());
+    const float aniosRestantes = std::max(0.0f, bichito.getEdadMaxima() - bichito.getEdadActual());
+    const float segundosRestantes = aniosRestantes / ANIOS_POR_SEGUNDO;
+    colaVejez.insertar(bichito.getId(), tiempoSimulacion + segundosRestantes, bichito.getEdadMaxima());
 }
 
 void MotorGrafico::procesarMuertesPorHambre()
@@ -210,6 +216,7 @@ void MotorGrafico::procesarMuertesPorHambre()
         const Bichito& b = poblacion.obtenerRef(i);
         if (b.murioDeHambre())
         {
+            ++muertesHambre;
             agregarComida(b.getX(), b.getY(), 2, 30, OrigenComida::Cadaver);
             eliminarBichitoEn(i);
         }
@@ -232,6 +239,7 @@ void MotorGrafico::procesarMuertesPorVejez()
         if (b.esInmortal())
             continue;
 
+        ++muertesVejez;
         agregarComida(b.getX(), b.getY(), 2, 30, OrigenComida::Cadaver);
         eliminarBichitoEn(indice);
     }
@@ -339,8 +347,8 @@ void MotorGrafico::cargarSimulacionGeneral()
         agregarBichitoAlFinal(b);
     }
 
-    // Generar comida inicial abundante repartida por todo el mapa
-    constexpr int COMIDA_INICIAL_GENERAL = 35;
+    // Generar comida inicial moderada para que haya competencia real por el alimento
+    constexpr int COMIDA_INICIAL_GENERAL = 18;
     for (int i = 0; i < COMIDA_INICIAL_GENERAL; ++i) {
         const int prioridad = obtenerRarezaSiguiente();
         const int puntosVida = prioridad == 1 ? 50 : (prioridad == 2 ? 30 : 15);
@@ -478,8 +486,8 @@ void MotorGrafico::actualizarFisica(float dt)
     // 3. Envejecimiento constante, desgaste de vida por estación y cooldowns
     for (int i = 0; i < poblacion.longitud(); ++i) {
         Bichito& b = poblacion.obtenerRef(i);
-        b.envejecer(dt);
-        b.cambiarVida(-(estacionActual.desgasteVida * 0.5f * dt));
+        b.envejecer(dt * ANIOS_POR_SEGUNDO);
+        b.cambiarVida(-(estacionActual.desgasteVida * 1.15f * dt));
 
         if (b.getCooldownReproduccion() > 0.0f) {
             b.setCooldownReproduccion(b.getCooldownReproduccion() - dt);
@@ -602,8 +610,8 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
 {
     temporizadorComida += dt;
 
-    // Generar comida automática según la rareza indicada por la bolsa (2 por oleada, tope 120).
-    constexpr int MAX_COMIDA_ACTIVA = 120;
+    // Generar comida automática según la rareza indicada por la bolsa (1 por oleada, tope 80).
+    constexpr int MAX_COMIDA_ACTIVA = 80;
     if (temporizadorComida >= intervaloComida)
     {
         float margen = 30.0f;
@@ -615,7 +623,7 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
         float rangoX = maxX - minX;
         float rangoY = maxY - minY;
 
-        for (int k = 0; k < 2 && comidasActivas.longitud() < MAX_COMIDA_ACTIVA; ++k)
+        if (comidasActivas.longitud() < MAX_COMIDA_ACTIVA)
         {
             const int prioridad = obtenerRarezaSiguiente();
             const int puntosVida = prioridad == 1 ? 50 : (prioridad == 2 ? 30 : 15);
@@ -1271,11 +1279,11 @@ int MotorGrafico::obtenerRarezaSiguiente() {
 
 float MotorGrafico::calcularIntervaloComida(const std::string& nombreEstacion)
 {
-    float base = 0.45f;
-    if (nombreEstacion == "Primavera") base = 0.30f;
-    else if (nombreEstacion == "Verano") base = 0.45f;
-    else if (nombreEstacion == "Otono") base = 0.75f;
-    else if (nombreEstacion == "Invierno") base = 1.10f;
+    float base = 0.95f;
+    if (nombreEstacion == "Primavera") base = 0.65f;
+    else if (nombreEstacion == "Verano") base = 0.95f;
+    else if (nombreEstacion == "Otono") base = 1.60f;
+    else if (nombreEstacion == "Invierno") base = 2.40f;
 
     // Frecuencia con ligera variación aleatoria (jitter entre 0.7x y 1.3x)
     float factor = 0.7f + 0.6f * (static_cast<float>(std::rand()) / RAND_MAX);

@@ -41,6 +41,7 @@ BarraLateral::BarraLateral(GestorRecursos& recursos, MotorGrafico& motor, std::f
       lineaComida_(recursos, "", 13, sf::Vector2f(X0 + MARGEN, 86)),
       lineaArreglo_(recursos, "", 13, sf::Vector2f(X0 + MARGEN, 104)),
       lineaDesastre_(recursos, "", 12, sf::Vector2f(X0 + MARGEN, 122)),
+      lineaMuertes_(recursos, "", 12, sf::Vector2f(CX, 574), Etiqueta::Alineacion::Centro),
       etVelocidad_(recursos, "", 14, sf::Vector2f(CX, 222), Etiqueta::Alineacion::Centro),
       etBichitos_(recursos, "Bichitos", 14, sf::Vector2f(CX, 310), Etiqueta::Alineacion::Centro),
       etPrioridad_(recursos, "Tipo de comida:", 13, sf::Vector2f(CX, 344), Etiqueta::Alineacion::Centro),
@@ -54,6 +55,7 @@ BarraLateral::BarraLateral(GestorRecursos& recursos, MotorGrafico& motor, std::f
     lineaComida_.setColor(sf::Color(255, 220, 110));
     lineaArreglo_.setColor(sf::Color(180, 195, 215));
     lineaDesastre_.setColor(sf::Color(255, 145, 140));
+    lineaMuertes_.setColor(sf::Color(225, 200, 165));
     etPrioridad_.setColor(sf::Color(200, 215, 230));
     etDesastres_.setColor(sf::Color(255, 130, 135));
     etAyuda_.setColor(sf::Color(150, 168, 190));
@@ -156,6 +158,8 @@ void BarraLateral::actualizar()
     lineaArreglo_.setTexto("Arreglo: " + std::to_string(motor_.getNumBichitos()) + "/" +
                            std::to_string(motor_.getCapacidadPoblacion()));
     lineaDesastre_.setTexto("Desastre: " + motor_.getResumenUltimoDesastre());
+    lineaMuertes_.setTexto("Hambre: " + std::to_string(motor_.getMuertesHambre()) +
+                           "  |  Vejez: " + std::to_string(motor_.getMuertesVejez()));
     etVelocidad_.setTexto(std::string("Vel: ") + NOMBRES_VELOCIDAD[indiceVelocidad_]);
 
     if (motor_.estaPausado())
@@ -207,6 +211,7 @@ void BarraLateral::dibujar(sf::RenderTarget& destino) const
     lineaComida_.dibujar(destino);
     lineaArreglo_.dibujar(destino);
     lineaDesastre_.dibujar(destino);
+    lineaMuertes_.dibujar(destino);
     etVelocidad_.dibujar(destino);
     etBichitos_.dibujar(destino);
     etPrioridad_.dibujar(destino);
