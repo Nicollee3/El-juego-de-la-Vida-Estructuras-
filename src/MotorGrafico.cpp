@@ -10,9 +10,6 @@
 
 namespace
 {
-    // NUEVO (corrige un error): Bichito::setVida RECHAZA valores fuera de 0..200 y no hace nada.
-    // Antes, cuando la vida iba a quedar negativa, la resta se ignoraba y el bichito nunca moría.
-    // Esta función limita el resultado al rango válido antes de llamar a setVida.
     std::string enMinusculas(std::string s)
     {
         std::transform(s.begin(), s.end(), s.begin(),
@@ -36,6 +33,44 @@ namespace
         if (prioridad == 2) return sf::Color(90, 200, 90);  // verde
         return sf::Color(150, 110, 70);                     // cafe
     }
+
+    // --- NUEVO CÓDIGO GENÉTICO: Generación y colores por gen ---
+    Genoma generarGenomaInicial()
+    {
+        // Velocidad aleatoria entre 85 y 155 (acopla automáticamente su metabolismo)
+        float vel = 85.0f + static_cast<float>(std::rand() % 71);
+        
+        // ~45% nacen normales (NINGUNO), ~55% nacen con algún gen estático inicial
+        auto sortearGen = []() -> GenEstatico {
+            int r = std::rand() % 100;
+            if (r < 45) return GenEstatico::NINGUNO;
+            return static_cast<GenEstatico>(1 + (std::rand() % 7));
+        };
+
+        GenEstatico g1 = sortearGen();
+        GenEstatico g2 = sortearGen();
+        if (g1 != GenEstatico::NINGUNO && g1 == g2) g2 = GenEstatico::NINGUNO;
+
+        return Genoma(vel, g1, g2);
+    }
+
+    sf::Color colorPorGenoma(const Genoma& g)
+    {
+        auto tiene = [&](GenEstatico buscado) {
+            return g.genEstatico1 == buscado || g.genEstatico2 == buscado;
+        };
+
+        if (tiene(GenEstatico::CANIBALISMO))       return sf::Color(235, 50, 50);   // Rojo: Caníbal
+        if (tiene(GenEstatico::VAMPIRISMO))        return sf::Color(165, 25, 95);   // Vinotinto/Magenta: Vampiro
+        if (tiene(GenEstatico::INMORTAL))          return sf::Color(185, 110, 255); // Morado: Inmortal
+        if (tiene(GenEstatico::INMUNIDAD))         return sf::Color(255, 215, 40);  // Dorado: Inmune
+        if (tiene(GenEstatico::ENFERMEDAD))        return sf::Color(130, 230, 60);  // Verde tóxico: Enfermo
+        if (tiene(GenEstatico::TELETRANSPORTARSE)) return sf::Color(50, 240, 220);  // Turquesa: Teletransporte
+        if (tiene(GenEstatico::MITOSIS))           return sf::Color(255, 155, 60);  // Naranja: Mitosis
+        
+        return sf::Color(70, 190, 255); // Azul celeste: Bichito estándar
+    }
+    // ------------------------------------------------------------
 
     constexpr int POBLACION_INICIAL_GENERAL = 60;
     constexpr float ANIOS_POR_SEGUNDO = 5.0f; // 20 años -> 4s, 200 años -> 40s, 400 años -> 80s
@@ -74,7 +109,6 @@ namespace
     }
 }
 
-// CAMBIO: ya no se crea la ventana aquí (ni setFramerateLimit): lo hace Aplicacion.
 MotorGrafico::MotorGrafico(ArregloDinamico<Bichito>& _poblacion, sf::Vector2f _tamanoMundo)
     : tamanoMundo(_tamanoMundo),
     poblacion(_poblacion),
@@ -103,8 +137,6 @@ MotorGrafico::MotorGrafico(ArregloDinamico<Bichito>& _poblacion, sf::Vector2f _t
 
 void MotorGrafico::setVelocidad(float v)
 {
-    // Máximo 4x: a 120 px/s el bichito avanza 8 px por frame, menos que el radio de captura (15 px).
-    // Con más velocidad podría "saltarse" la comida sin tocarla.
     velocidadSim = std::max(0.25f, std::min(v, 4.0f));
 }
 
@@ -117,12 +149,6 @@ void MotorGrafico::agregarComida(float x, float y, int prioridad, int puntosVida
                                  OrigenComida origen)
 {
     static int idComida = 1;
-
-    Estacion estacionActual = estaciones.obtener_actual();
-    // if ((estacionActual.nombre == "Otono" || estacionActual.nombre == "Invierno") && prioridad == 1)
-    // {
-    //     prioridad = 2;
-    // }
 
     Comida c(idComida++, prioridad, puntosVida, x, y, origen);
     comidasActivas.generar(c);
@@ -199,7 +225,6 @@ void MotorGrafico::vaciarPoblacion()
 
 void MotorGrafico::registrarEnColaVejez(const Bichito& bichito)
 {
-    // Los inmortales NO mueren de vejez (solo de hambre cuando vida <= 0).
     if (bichito.esInmortal())
         return;
 
@@ -210,7 +235,6 @@ void MotorGrafico::registrarEnColaVejez(const Bichito& bichito)
 
 void MotorGrafico::procesarMuertesPorHambre()
 {
-    // TODOS los bichitos (incluidos inmortales) mueren de hambre al llegar a vida <= 0 (swap-and-pop O(1)).
     for (int i = poblacion.longitud() - 1; i >= 0; --i)
     {
         const Bichito& b = poblacion.obtenerRef(i);
@@ -225,7 +249,6 @@ void MotorGrafico::procesarMuertesPorHambre()
 
 void MotorGrafico::procesarMuertesPorVejez()
 {
-    // Consulta O(1) en el Min-Heap: extrae a quienes alcanzaron su edadMaxima y los elimina en swap-and-pop O(1).
     EntradaVejez tope;
     while (colaVejez.ver_primero(tope) && tope.tiempoMuerte <= tiempoSimulacion)
     {
@@ -233,7 +256,7 @@ void MotorGrafico::procesarMuertesPorVejez()
 
         int indice = -1;
         if (!indicesBichitos.buscar(tope.id, indice))
-            continue; // Ya murió antes por hambre o por un desastre
+            continue;
 
         const Bichito& b = poblacion.obtenerRef(indice);
         if (b.esInmortal())
@@ -313,7 +336,8 @@ void MotorGrafico::agregarBichito()
     const float x = 40.0f + static_cast<float>(std::rand() % rangoX);
     const float y = 40.0f + static_cast<float>(std::rand() % rangoY);
 
-    Bichito b(idNuevo++, 40.0f, x, y);
+    // MODIFICADO: Nace con genoma aleatorio inicial
+    Bichito b(idNuevo++, 40.0f, x, y, generarGenomaInicial());
     agregarBichitoAlFinal(b);
 }
 
@@ -326,28 +350,24 @@ void MotorGrafico::quitarBichito()
 void MotorGrafico::cargarSimulacionGeneral()
 {
     modoActual = ModoSimulacion::Normal;
-    pausado = true; // Empieza pausado
+    pausado = true;
     vaciarComidas();
-
-    // Limpiar población anterior
     vaciarPoblacion();
-
     mezclarBolsaComida();
 
-    // Generar una colonia inicial numerosa con vidas variadas para que el ecosistema
-    // prospere y soporte los desastres naturales sin extinguirse de inmediato.
     const int rangoX = std::max(1, static_cast<int>(tamanoMundo.x) - 80);
     const int rangoY = std::max(1, static_cast<int>(tamanoMundo.y) - 80);
     const int cantidadInicial = std::max(1, bichitosIniciales);
     for (int i = 0; i < cantidadInicial; ++i) {
         const float x = 40.0f + static_cast<float>(std::rand() % rangoX);
         const float y = 40.0f + static_cast<float>(std::rand() % rangoY);
-        const float vidaInicial = 40.0f + static_cast<float>(std::rand() % 56); // 40..95
-        Bichito b(i + 1, vidaInicial, x, y);
+        const float vidaInicial = 40.0f + static_cast<float>(std::rand() % 56);
+        
+        // MODIFICADO: Cada fundador nace con su propio genoma aleatorio
+        Bichito b(i + 1, vidaInicial, x, y, generarGenomaInicial());
         agregarBichitoAlFinal(b);
     }
 
-    // Generar comida inicial moderada para que haya competencia real por el alimento
     constexpr int COMIDA_INICIAL_GENERAL = 18;
     for (int i = 0; i < COMIDA_INICIAL_GENERAL; ++i) {
         const int prioridad = obtenerRarezaSiguiente();
@@ -363,32 +383,26 @@ void MotorGrafico::cargarSimulacionGeneral()
     motorDesastres.reiniciar();
 }
 
-
-
 void MotorGrafico::cargarEscenarioCompetencia(int nAgentes)
 {
-    if (nAgentes < 0) nAgentes = agentesCompetencia; // NUEVO: valor por defecto configurable
+    if (nAgentes < 0) nAgentes = agentesCompetencia;
     if (nAgentes < 1) nAgentes = 1;
 
     modoActual = ModoSimulacion::EscenarioCompetencia;
     vaciarComidas();
-
-    // Limpiar población reiniciando índices (eliminando iterativamente)
     vaciarPoblacion();
 
-    // Ubicar 1 unidad de comida en el centro
     float centroX = tamanoMundo.x / 2.0f;
     float centroY = tamanoMundo.y / 2.0f;
     agregarComida(centroX, centroY, 1, 50);
 
-    // Generar N agentes alrededor en círculo dirigiéndose al centro
     float radioInicial = 300.0f;
     for (int i = 0; i < nAgentes; ++i) {
         float angulo = (2.0f * 3.14159f / nAgentes) * i;
         float bx = centroX + radioInicial * std::cos(angulo);
         float by = centroY + radioInicial * std::sin(angulo);
 
-        Bichito b(i + 1, 20.0f, bx, by); // Vida inicial baja (20 pts)
+        Bichito b(i + 1, 20.0f, bx, by);
         b.setTarget(centroX, centroY);
         b.setEstado(EstadoBichito::BuscandoComida);
         agregarBichitoAlFinal(b);
@@ -399,11 +413,8 @@ void MotorGrafico::cargarEscenarioReproduccion()
 {
     modoActual = ModoSimulacion::EscenarioReproduccion;
     vaciarComidas();
-
     vaciarPoblacion();
 
-    // Crear dos agentes ubicados a corta distancia el uno del otro
-    // CAMBIO: tamanoMundo en vez de ventana.getSize()
     float centroX = tamanoMundo.x / 2.0f;
     float centroY = tamanoMundo.y / 2.0f;
 
@@ -420,11 +431,8 @@ void MotorGrafico::cargarEscenarioReproduccion()
     agregarBichitoAlFinal(b2);
 }
 
-// NUEVO: reemplaza la parte de eventos que estaba dentro de ejecutar().
-// Ya NO maneja el cierre de la ventana (eso lo hace Aplicacion).
 void MotorGrafico::procesarEvento(const sf::Event& evento)
 {
-    // Teclas para cambiar escenarios de prueba
     if (evento.type == sf::Event::KeyPressed) {
         if (evento.key.code == sf::Keyboard::Num1) {
             cargarEscenarioCompetencia();
@@ -435,9 +443,6 @@ void MotorGrafico::procesarEvento(const sf::Event& evento)
         }
     }
 
-    // Click para poner comida manualmente en el mapa.
-    // CAMBIO: solo si el clic cae dentro del mundo (no sobre la barra lateral)
-    // y con la prioridad elegida en la barra.
     if (evento.type == sf::Event::MouseButtonPressed &&
         evento.mouseButton.button == sf::Mouse::Left &&
         static_cast<float>(evento.mouseButton.x) < tamanoMundo.x &&
@@ -447,7 +452,6 @@ void MotorGrafico::procesarEvento(const sf::Event& evento)
     }
 }
 
-// NUEVO: avanza la simulación, respetando pausa y velocidad.
 void MotorGrafico::actualizar(float dt)
 {
     tiempoVisual += dt;
@@ -465,7 +469,6 @@ void MotorGrafico::actualizarFisica(float dt)
 {
     tiempoSimulacion += dt;
 
-    // 1. Control del ciclo de estaciones
     temporizadorEstacion += dt;
     if (temporizadorEstacion >= tiempoCambioEstacion) {
         estaciones.siguiente_estación();
@@ -474,7 +477,6 @@ void MotorGrafico::actualizarFisica(float dt)
 
     Estacion estacionActual = estaciones.obtener_actual();
 
-    // 2. Procesamiento según el modo de simulación
     if (modoActual == ModoSimulacion::EscenarioCompetencia) {
         procesarEscenarioCompetencia(dt);
     } else if (modoActual == ModoSimulacion::EscenarioReproduccion) {
@@ -483,7 +485,6 @@ void MotorGrafico::actualizarFisica(float dt)
         procesarSimulacionGeneral(dt);
     }
 
-    // 3. Envejecimiento constante, desgaste de vida por estación y cooldowns
     for (int i = 0; i < poblacion.longitud(); ++i) {
         Bichito& b = poblacion.obtenerRef(i);
         b.envejecer(dt * ANIOS_POR_SEGUNDO);
@@ -494,7 +495,6 @@ void MotorGrafico::actualizarFisica(float dt)
         }
     }
 
-    // 4. Muerte por hambre (vida == 0, aplica a todos incluidos inmortales) y por vejez (Min-Heap)
     procesarMuertesPorHambre();
     procesarMuertesPorVejez();
 }
@@ -514,7 +514,7 @@ void MotorGrafico::procesarEscenarioCompetencia(float dt)
         return;
     }
 
-    Comida& comidaUnica = comidasActivas.obtenerRef(0); // antes comidasActivas[0]
+    Comida& comidaUnica = comidasActivas.obtenerRef(0);
     float radioColisionComida = 15.0f;
 
     for (int i = 0; i < poblacion.longitud(); ++i) {
@@ -531,15 +531,13 @@ void MotorGrafico::procesarEscenarioCompetencia(float dt)
         float dy = comidaUnica.getY() - b.getY();
         float dist = std::sqrt(dx * dx + dy * dy);
 
-        // El primer agente en llegar consume la comida y extiende su vida
         if (dist <= radioColisionComida && comidaUnica.isActiva()) {
             comidaUnica.setActiva(false);
-            b.cambiarVida(static_cast<float>(comidaUnica.getPuntosDeVida())); // CAMBIO: cambiarVida
+            b.cambiarVida(static_cast<float>(comidaUnica.getPuntosDeVida()));
             std::cout << "¡El Bichito ID " << b.getId() << " ha ganado la comida y aumentado su vida!\n";
         }
     }
 
-    // Eliminar comida consumida
     if (!comidaUnica.isActiva()) {
         vaciarComidas();
     }
@@ -548,7 +546,7 @@ void MotorGrafico::procesarEscenarioCompetencia(float dt)
 void MotorGrafico::procesarEscenarioReproduccion(float dt)
 {
     float radioProximidad = 35.0f;
-    float tiempoRequerido = 2.0f; // Tiempo cerca en segundos para reproducirse
+    float tiempoRequerido = 2.0f;
 
     for (int i = 0; i < poblacion.longitud(); ++i) {
         Bichito& b = poblacion.obtenerRef(i);
@@ -577,7 +575,6 @@ void MotorGrafico::procesarEscenarioReproduccion(float dt)
             b2.setTiempoCercaPareja(b2.getTiempoCercaPareja() + dt);
 
             if (b1.getTiempoCercaPareja() >= tiempoRequerido) {
-                // Generar nuevo bichito hijo en el punto medio
                 float hijoX = (b1.getX() + b2.getX()) / 2.0f;
                 float hijoY = (b1.getY() + b2.getY()) / 2.0f;
 
@@ -588,12 +585,9 @@ void MotorGrafico::procesarEscenarioReproduccion(float dt)
 
                 std::cout << "¡Nacio un nuevo Bichito (ID: " << nuevoId << ") por reproduccion!\n";
 
-                // OJO: poblacion.generar() puede mover el arreglo en memoria, y b1/b2 serían
-                // referencias inválidas. Las volvemos a pedir antes de seguir usándolas.
                 Bichito& p1 = poblacion.obtenerRef(0);
                 Bichito& p2 = poblacion.obtenerRef(1);
 
-                // Reiniciar contadores
                 p1.setTiempoCercaPareja(0.0f);
                 p2.setTiempoCercaPareja(0.0f);
                 p1.setTarget(p1.getX() - 100.0f, p1.getY());
@@ -610,7 +604,6 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
 {
     temporizadorComida += dt;
 
-    // Generar comida automática según la rareza indicada por la bolsa (1 por oleada, tope 80).
     constexpr int MAX_COMIDA_ACTIVA = 80;
     if (temporizadorComida >= intervaloComida)
     {
@@ -632,13 +625,10 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
             agregarComida(rx, ry, prioridad, puntosVida);
         }
 
-        // Recalcular intervalo para el próximo drop
         intervaloComida = calcularIntervaloComida(estaciones.obtener_actual().nombre);
         temporizadorComida = 0.0f;
     }
 
-    // CAMBIO: Reconstruir el R-Tree con las comidas activas actuales
-    
     rtreeComida.limpiar();
     for (int i = 0; i < comidasActivas.longitud(); ++i) {
         const Comida& c = comidasActivas.obtenerRef(i);
@@ -647,25 +637,21 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
         }
     }
 
-    // Actualización física de bichitos (y registro de recién nacidos en la cola de vejez)
     const int poblacionAntes = poblacion.longitud();
     for (int i = 0; i < poblacionAntes; ++i) {
         Bichito &bichito = poblacion.obtenerRef(i);
-        // NUEVO: Se pasan indicesComida y rtreeComida al método actualizar
         bichito.actualizar(dt, comidasActivas, indicesComida, rtreeComida, poblacion, indicesBichitos);
     }
     for (int i = poblacionAntes; i < poblacion.longitud(); ++i) {
         registrarEnColaVejez(poblacion.obtenerRef(i));
     }
     
-    // La comida consumida se elimina del arreglo dinámico y no se recicla en la bolsa.
     for (int i = comidasActivas.longitud() - 1; i >= 0; --i) {
         Comida& c = comidasActivas.obtenerRef(i);
         if (!c.isActiva())
             eliminarComidaEn(i);
     }
 
-    // Desastres naturales aleatorios y control de sobrepoblación (The Reaper).
     if (motorDesastres.actualizar(dt, poblacion, [this](int id) { eliminarBichitoPorId(id); }))
     {
         const ResultadoDesastre& res = motorDesastres.getUltimoResultado();
@@ -676,16 +662,12 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
     }
 }
 
-// CAMBIO: antes se llamaba renderizar() y dibujaba en su propia ventana (clear + display).
-// Ahora recibe dónde dibujar (destino) y el gestor de texturas. La Aplicacion hace clear/display.
 void MotorGrafico::dibujar(sf::RenderTarget& destino, GestorRecursos& recursos)
 {
-    // 1) Fondo: cambia con la estación. Archivo: assets/textures/fondos/fondo_<estacion>.png
     const std::string estacion = enMinusculas(estaciones.obtener_actual().nombre);
     recursos.dibujarFondo(destino, "fondos/fondo_" + estacion, sf::Vector2u(250, 180),
     colorFondoEstacion(estacion), sf::Vector2f(0.0f, 0.0f), tamanoMundo);
 
-    // 2) Comida: antes círculos verdes; ahora un sprite por prioridad (entidades/comida_1, _2, _3).
     for (int i = 0; i < comidasActivas.longitud(); ++i) {
         const Comida& c = comidasActivas.obtenerRef(i);
         if (!c.isActiva()) continue;
@@ -694,26 +676,26 @@ void MotorGrafico::dibujar(sf::RenderTarget& destino, GestorRecursos& recursos)
         sf::Vector2u(8, 8), colorComida(c.getPrioridad()),
         Forma::Circulo);
         sf::Sprite sprite(tex);
-        sprite.setOrigin(tex.getSize().x / 2.0f, tex.getSize().y / 2.0f); // origen al centro
+        sprite.setOrigin(tex.getSize().x / 2.0f, tex.getSize().y / 2.0f);
         sprite.setScale(Config::ESCALA_COMIDA, Config::ESCALA_COMIDA);
         sprite.setPosition(std::round(c.getX()), std::round(c.getY()));
         destino.draw(sprite);
     }
 
-    // 3) Bichitos: antes círculos azules; ahora el sprite entidades/bichito.
+    // MODIFICADO: Bichitos coloreados dinámicamente según su genética
     for (int i = 0; i < poblacion.longitud(); ++i) {
         const Bichito& b = poblacion.obtenerRef(i);
 
         const sf::Texture& tex = recursos.textura("entidades/bichito", sf::Vector2u(16, 16),
-        sf::Color(50, 180, 255), Forma::Circulo);
+        sf::Color::White, Forma::Circulo);
         sf::Sprite sprite(tex);
         sprite.setOrigin(tex.getSize().x / 2.0f, tex.getSize().y / 2.0f);
+        sprite.setColor(colorPorGenoma(b.getGenetica()));
 
-        
-        float diametro = 20.0f; // Tamaño base del bichito
+        float diametro = 20.0f;
 
         if (Config::BICHITO_CRECE)
-            diametro = 2.0f * (10.0f + b.getVida() / 10.0f); // Mientras más vida, más grande (radio = 10 + vida/10).
+            diametro = 2.0f * (10.0f + b.getVida() / 10.0f);
 
         float escala = diametro / static_cast<float>(tex.getSize().x);
         sprite.setScale(escala, escala);
@@ -722,13 +704,8 @@ void MotorGrafico::dibujar(sf::RenderTarget& destino, GestorRecursos& recursos)
         destino.draw(sprite);
     }
 
-    // 4) Efectos ambientales según la estación actual (nieve, hojas, pétalos, sol).
     dibujarEfectosEstacion(destino, estacion);
-
-    // 5) Animación temática del desastre activo (lluvia, estallido blanco, parca, meteoritos...).
     dibujarAnimacionDesastre(destino);
-
-    // 6) Banner impactante en el centro del mundo cuando ocurre un desastre.
     dibujarAlertaDesastre(destino, recursos);
 }
 
@@ -745,7 +722,6 @@ void MotorGrafico::dibujarAlertaDesastre(sf::RenderTarget& destino, GestorRecurs
 
     const float tiempoTranscurrido = duracionAlertaDesastre - tiempoAlertaDesastre;
 
-    // Fade-out suave en el último segundo
     float factorAlpha = 1.0f;
     if (tiempoAlertaDesastre < 1.0f)
     {
@@ -754,7 +730,6 @@ void MotorGrafico::dibujarAlertaDesastre(sf::RenderTarget& destino, GestorRecurs
 
     const sf::Color acento = colorDesastre(alertaDesastre.tipo);
 
-    // 1. Destello de impacto sobre el mundo durante el primer 0.65 s
     if (tiempoTranscurrido < 0.65f)
     {
         const float flash = 1.0f - (tiempoTranscurrido / 0.65f);
@@ -765,7 +740,6 @@ void MotorGrafico::dibujarAlertaDesastre(sf::RenderTarget& destino, GestorRecurs
         destino.draw(overlay);
     }
 
-    // 2. Panel central oscuro con borde grueso temático
     const float cx = tamanoMundo.x / 2.0f;
     const float cy = tamanoMundo.y / 2.0f;
     const sf::Vector2f tamPanel(680.0f, 185.0f);
@@ -787,7 +761,6 @@ void MotorGrafico::dibujarAlertaDesastre(sf::RenderTarget& destino, GestorRecurs
 
     const sf::Uint8 alphaTexto = static_cast<sf::Uint8>(255.0f * factorAlpha);
 
-    // 3. Encabezado de alerta
     const std::string encabezadoStr = (alertaDesastre.tipo == TipoDesastre::Sobrepoblacion)
                                           ? "¡LA PARCA EQUILIBRA LA POBLACIÓN!"
                                           : "¡DESASTRE NATURAL!";
@@ -798,7 +771,6 @@ void MotorGrafico::dibujarAlertaDesastre(sf::RenderTarget& destino, GestorRecurs
     centrarTexto(txtEncabezado, cx, cy - 58.0f);
     destino.draw(txtEncabezado);
 
-    // 4. Título principal gigante
     sf::Text txtTitulo(utf8(tituloImpactante(alertaDesastre.tipo)), recursos.fuente(), 38);
     txtTitulo.setStyle(sf::Text::Bold);
     txtTitulo.setFillColor(sf::Color(255, 255, 255, alphaTexto));
@@ -807,7 +779,6 @@ void MotorGrafico::dibujarAlertaDesastre(sf::RenderTarget& destino, GestorRecurs
     centrarTexto(txtTitulo, cx, cy - 10.0f);
     destino.draw(txtTitulo);
 
-    // 5. Subtítulo específico según el desastre ocurrido
     const std::string nStr = std::to_string(alertaDesastre.bajasReales);
     std::string bajasStr;
     switch (alertaDesastre.tipo)
@@ -836,7 +807,6 @@ void MotorGrafico::dibujarAlertaDesastre(sf::RenderTarget& destino, GestorRecurs
     centrarTexto(txtBajas, cx, cy + 36.0f);
     destino.draw(txtBajas);
 
-    // 6. Desglose por nivel de la Cola con Prioridad
     const std::string nivelesStr =
         "Prioridad  N1: " + std::to_string(alertaDesastre.bajasPorNivel[0]) +
         "  |  N2: " + std::to_string(alertaDesastre.bajasPorNivel[1]) +
@@ -892,7 +862,6 @@ void MotorGrafico::dibujarEfectosEstacion(sf::RenderTarget& destino, const std::
 {
     if (estacion == "invierno")
     {
-        // Copos de nieve blancos/azulados cayendo suavemente
         for (const auto& p : particulasClima)
         {
             const sf::Color colorCopo = (p.variante == 0)
@@ -927,7 +896,6 @@ void MotorGrafico::dibujarEfectosEstacion(sf::RenderTarget& destino, const std::
 
     if (estacion == "otono")
     {
-        // Hojas otoñales (naranja, ocre, rojo quemado, dorado) rotando al caer
         const sf::Color paletaOtono[4] = {
             sf::Color(235, 125, 35, 215),
             sf::Color(210, 75, 35, 215),
@@ -936,7 +904,7 @@ void MotorGrafico::dibujarEfectosEstacion(sf::RenderTarget& destino, const std::
         };
         for (const auto& p : particulasClima)
         {
-            sf::CircleShape hoja(p.tam * 0.95f, 4); // rombo/hoja estilizada
+            sf::CircleShape hoja(p.tam * 0.95f, 4);
             hoja.setOrigin(hoja.getRadius(), hoja.getRadius());
             hoja.setScale(1.45f, 0.72f);
             hoja.setPosition(p.x, p.y);
@@ -949,7 +917,6 @@ void MotorGrafico::dibujarEfectosEstacion(sf::RenderTarget& destino, const std::
 
     if (estacion == "primavera")
     {
-        // Pétalos rosados, blancos y lila flotando con la brisa
         const sf::Color paletaPrimavera[4] = {
             sf::Color(255, 175, 205, 210),
             sf::Color(255, 210, 225, 205),
@@ -971,11 +938,9 @@ void MotorGrafico::dibujarEfectosEstacion(sf::RenderTarget& destino, const std::
 
     if (estacion == "verano")
     {
-        // Sol radiante en la esquina superior derecha del mundo + motas cálidas flotando
         const sf::Vector2f posSol(tamanoMundo.x - 86.0f, 82.0f);
         const float pulso = 1.0f + 0.07f * std::sin(tiempoVisual * 2.5f);
 
-        // Halos cálidos
         sf::CircleShape haloExt(74.0f * pulso);
         haloExt.setOrigin(haloExt.getRadius(), haloExt.getRadius());
         haloExt.setPosition(posSol);
@@ -988,7 +953,6 @@ void MotorGrafico::dibujarEfectosEstacion(sf::RenderTarget& destino, const std::
         haloMed.setFillColor(sf::Color(255, 225, 85, 55));
         destino.draw(haloMed);
 
-        // Rayos solares girando lentamente
         for (int i = 0; i < 12; ++i)
         {
             const float ang = tiempoVisual * 20.0f + static_cast<float>(i) * 30.0f;
@@ -1000,21 +964,19 @@ void MotorGrafico::dibujarEfectosEstacion(sf::RenderTarget& destino, const std::
             destino.draw(rayo);
         }
 
-        // Disco solar central
         sf::CircleShape disco(32.0f);
         disco.setOrigin(32.0f, 32.0f);
         disco.setPosition(posSol);
         disco.setFillColor(sf::Color(255, 232, 95, 235));
         destino.draw(disco);
 
-        // Motas doradas de luz veraniega
         for (int i = 0; i < static_cast<int>(particulasClima.size()); i += 2)
         {
             const auto& p = particulasClima[static_cast<std::size_t>(i)];
             const float brillo = 0.5f + 0.5f * std::sin(tiempoVisual * 3.0f + p.fase);
             sf::CircleShape mota(p.tam * 0.55f);
             mota.setOrigin(mota.getRadius(), mota.getRadius());
-            mota.setPosition(p.x, tamanoMundo.y - p.y); // suben suavemente
+            mota.setPosition(p.x, tamanoMundo.y - p.y);
             mota.setFillColor(sf::Color(255, 238, 130, static_cast<sf::Uint8>(135.0f * brillo)));
             destino.draw(mota);
         }
@@ -1026,13 +988,12 @@ void MotorGrafico::dibujarAnimacionDesastre(sf::RenderTarget& destino) const
     if (tiempoAlertaDesastre <= 0.0f || alertaDesastre.tipo == TipoDesastre::Ninguno)
         return;
 
-    const float t = duracionAlertaDesastre - tiempoAlertaDesastre; // 0 .. duracion
+    const float t = duracionAlertaDesastre - tiempoAlertaDesastre;
     const float progreso = std::min(1.0f, std::max(0.0f, t / duracionAlertaDesastre));
     const float fade = (tiempoAlertaDesastre < 1.0f) ? std::max(0.0f, tiempoAlertaDesastre) : 1.0f;
 
     if (alertaDesastre.tipo == TipoDesastre::Diluvio)
     {
-        // Tinte tormentoso + lluvia intensa inclinada + destello de relámpago
         sf::RectangleShape velo(tamanoMundo);
         velo.setFillColor(sf::Color(15, 45, 95, static_cast<sf::Uint8>(95.0f * fade)));
         destino.draw(velo);
@@ -1062,7 +1023,6 @@ void MotorGrafico::dibujarAnimacionDesastre(sf::RenderTarget& destino) const
 
     if (alertaDesastre.tipo == TipoDesastre::BombaNuclear)
     {
-        // ¡Estallido blanco cegador! + onda expansiva gigante desde el centro
         const float cx = tamanoMundo.x / 2.0f;
         const float cy = tamanoMundo.y / 2.0f;
 
@@ -1076,7 +1036,6 @@ void MotorGrafico::dibujarAnimacionDesastre(sf::RenderTarget& destino) const
             destino.draw(flashBlanco);
         }
 
-        // Onda expansiva circular
         const float radioOnda = 30.0f + t * 420.0f;
         if (radioOnda < 850.0f)
         {
@@ -1094,7 +1053,6 @@ void MotorGrafico::dibujarAnimacionDesastre(sf::RenderTarget& destino) const
 
     if (alertaDesastre.tipo == TipoDesastre::Meteoritos)
     {
-        // Bolas de fuego cayendo en diagonal con estela y anillos de impacto
         for (int i = 0; i < 8; ++i)
         {
             const float inicio = static_cast<float>(i) * 0.28f;
@@ -1148,7 +1106,6 @@ void MotorGrafico::dibujarAnimacionDesastre(sf::RenderTarget& destino) const
 
     if (alertaDesastre.tipo == TipoDesastre::Sobrepoblacion)
     {
-        // Viñeta oscura carmesí + figura de La Parca con capucha, ojos rojos y guadaña en movimiento
         sf::RectangleShape velo(tamanoMundo);
         velo.setFillColor(sf::Color(40, 8, 18, static_cast<sf::Uint8>(115.0f * fade)));
         destino.draw(velo);
@@ -1157,14 +1114,12 @@ void MotorGrafico::dibujarAnimacionDesastre(sf::RenderTarget& destino) const
         const float py = 148.0f + std::sin(t * 3.5f) * 8.0f;
         const sf::Uint8 a = static_cast<sf::Uint8>(245.0f * fade);
 
-        // Aura sombría detrás de La Parca
         sf::CircleShape aura(74.0f);
         aura.setOrigin(74.0f, 74.0f);
         aura.setPosition(px, py);
         aura.setFillColor(sf::Color(180, 20, 45, static_cast<sf::Uint8>(65.0f * fade)));
         destino.draw(aura);
 
-        // Manto / túnica triangular
         sf::ConvexShape manto(3);
         manto.setPoint(0, sf::Vector2f(px, py - 46.0f));
         manto.setPoint(1, sf::Vector2f(px - 56.0f, py + 62.0f));
@@ -1174,7 +1129,6 @@ void MotorGrafico::dibujarAnimacionDesastre(sf::RenderTarget& destino) const
         manto.setOutlineColor(sf::Color(150, 35, 55, a));
         destino.draw(manto);
 
-        // Capucha
         sf::CircleShape capucha(26.0f);
         capucha.setOrigin(26.0f, 26.0f);
         capucha.setPosition(px, py - 24.0f);
@@ -1183,7 +1137,6 @@ void MotorGrafico::dibujarAnimacionDesastre(sf::RenderTarget& destino) const
         capucha.setOutlineColor(sf::Color(165, 40, 60, a));
         destino.draw(capucha);
 
-        // Ojos rojos brillantes
         sf::CircleShape ojoIzq(4.5f);
         ojoIzq.setOrigin(4.5f, 4.5f);
         ojoIzq.setPosition(px - 9.0f, py - 24.0f);
@@ -1196,7 +1149,6 @@ void MotorGrafico::dibujarAnimacionDesastre(sf::RenderTarget& destino) const
         ojoDer.setFillColor(sf::Color(255, 45, 55, a));
         destino.draw(ojoDer);
 
-        // Guadaña haciendo movimiento de barrido
         const float angGuadana = -35.0f + std::sin(t * 5.0f) * 28.0f;
         sf::RectangleShape mango(sf::Vector2f(7.0f, 130.0f));
         mango.setOrigin(3.5f, 95.0f);
@@ -1205,7 +1157,6 @@ void MotorGrafico::dibujarAnimacionDesastre(sf::RenderTarget& destino) const
         mango.setFillColor(sf::Color(115, 85, 65, a));
         destino.draw(mango);
 
-        // Hoja metálica curva/angular en la punta del mango
         const float rad = (angGuadana - 90.0f) * 3.14159265f / 180.0f;
         const float puntaX = (px + 42.0f) + std::cos(rad) * 90.0f;
         const float puntaY = (py + 24.0f) + std::sin(rad) * 90.0f;
@@ -1225,7 +1176,6 @@ void MotorGrafico::dibujarAnimacionDesastre(sf::RenderTarget& destino) const
 
     if (alertaDesastre.tipo == TipoDesastre::PatriaMilagro)
     {
-        // Bandera de Colombia ondeando (50% amarillo, 25% azul, 25% rojo)
         constexpr int COLUMNAS = 40;
         const float anchoCol = tamanoMundo.x / static_cast<float>(COLUMNAS);
         const sf::Uint8 alphaBandera = static_cast<sf::Uint8>(135.0f * fade);
@@ -1296,7 +1246,6 @@ float MotorGrafico::calcularIntervaloComida(const std::string& nombreEstacion)
     else if (nombreEstacion == "Otono") base = 1.60f;
     else if (nombreEstacion == "Invierno") base = 2.40f;
 
-    // Frecuencia con ligera variación aleatoria (jitter entre 0.7x y 1.3x)
     float factor = 0.7f + 0.6f * (static_cast<float>(std::rand()) / RAND_MAX);
     return base * factor;
 }

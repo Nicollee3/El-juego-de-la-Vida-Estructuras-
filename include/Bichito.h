@@ -1,10 +1,10 @@
 /*
-- @file Bichito.h
-- @brief Representa a cada bichito dentro del juego de la vida.
-- @details Tiene atributos privados de identificación y de cuánta vida tiene. Cuenta con setters y getters con validaciones.
--          La lógica de comida y población utiliza ArregloDinamico.
-- @author Karoll Ramírez / Nicolle (Genética)
-- @OCTUBRE 2026
+ * @file Bichito.h
+ * @brief Representa a cada bichito dentro del juego de la vida.
+ * @details Tiene atributos privados de identificación y de cuánta vida tiene. Cuenta con setters y getters con validaciones.
+ *          La lógica de comida y población utiliza ArregloDinamico.
+ * @author Karoll Ramírez / Nicolle (Genética)
+ * @OCTUBRE 2026
  */
 
 #ifndef BICHITO_H
@@ -22,8 +22,8 @@ class ArregloDinamico;
 class RTree;
 
 /*
-- @enum EstadoBichito
-- @brief Define los posibles estados de comportamiento de un bichito en la simulación.
+ * @enum EstadoBichito
+ * @brief Define los posibles estados de comportamiento de un bichito en la simulación.
  */
 enum class EstadoBichito
 {
@@ -34,8 +34,8 @@ enum class EstadoBichito
 };
 
 /*
-- @class Bichito
-- @brief Modela una entidad autónoma (bichito) con ciclos de vida y movimiento.
+ * @class Bichito
+ * @brief Modela una entidad autónoma (bichito) con ciclos de vida y movimiento.
  */
 class Bichito
 {
@@ -60,15 +60,15 @@ private:
 
     // Declaración de métodos privados (sus cuerpos están en el .cpp)
     /*
-- @brief Decide el estado del bichito según su vida y su cooldown.
+     * @brief Decide el estado del bichito según su vida y su cooldown.
      */
     void evaluarEstado();
     /*
-- @brief Controla el movimiento de patrullaje o paseo cuando no hay estímulos cercanos.
+     * @brief Controla el movimiento de patrullaje o paseo cuando no hay estímulos cercanos.
      */
     void pasear();
     /*
-- @brief Genera un x,y aleatorio para pasear()
+     * @brief Genera un x,y aleatorio para pasear()
      */
     void destinoAleatorio();
     void buscarComida(ArregloDinamico<Comida>& comidas, Diccionario<int>& indicesComida, const RTree& rtreeComida);
@@ -78,11 +78,11 @@ private:
 
     void buscarPareja(ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices, float dt);
     void reproducirseCon(Bichito& pareja, ArregloDinamico<Bichito>& poblacion,
-                        Diccionario<int>& indices);
+                         Diccionario<int>& indices);
 
 public:
     /*
-- @brief Construye un nuevo objeto Bichito con valores predeterminados.
+     * @brief Construye un nuevo objeto Bichito con valores predeterminados.
      */
     Bichito();
     
@@ -90,14 +90,14 @@ public:
     Bichito(int _id, float _vida, float _x = 0.0f, float _y = 0.0f, Genoma _genes = Genoma());
 
     /*
-- @GETTERS Y SETTERS
-- @brief Métodos de acceso y modificación para los atributos privados del bichito.
+     * @GETTERS Y SETTERS
+     * @brief Métodos de acceso y modificación para los atributos privados del bichito.
      */
     int getId() const { return id; }
     float getVida() const { return vida; }
     float getEdadActual() const { return edadActual; }
     float getEdadMaxima() const { return edadMaxima; }
-    bool esInmortal() const { return inmortal; } // Nota: La lógica interna revisará genetica.genEstatico1/2
+    bool esInmortal() const { return inmortal; }
     float getX() const { return x; }
     float getY() const { return y; }
     float getTargetX() const { return targetX; }
@@ -130,12 +130,13 @@ public:
         targetX = _tx;
         targetY = _ty;
     }
-    // SETTER MODIFICADO: Al cambiar la velocidad, se actualiza el gen variable del metabolismo
+    // SETTER MODIFICADO: Al cambiar la velocidad, protege contra valores mínimos y actualiza el metabolismo
     void setVelocidad(float _v) 
     { 
-        velocidad = _v; 
-        genetica.velocidad = _v;
-        genetica.metabolismo = _v * 2.5f; 
+        float velSegura = (_v < 30.0f) ? 120.0f : _v;
+        velocidad = velSegura; 
+        genetica.velocidad = velSegura;
+        genetica.metabolismo = velSegura * 0.10f; 
     }
     void setEstado(EstadoBichito _e) { estado = _e; }
     void setTiempoCercaPareja(float _t) { tiempoCercaPareja = _t; }
@@ -146,22 +147,21 @@ public:
     bool condenar();
 
     /*
-- @brief Desplaza al bichito de manera fluida hacia su posición objetivo (targetX, targetY).
-- @param dt Incremento de tiempo (delta time) transcurrido en el fotograma.
+     * @brief Desplaza al bichito de manera fluida hacia su posición objetivo (targetX, targetY).
+     * @param dt Incremento de tiempo (delta time) transcurrido en el fotograma.
      */
     void moverHaciaObjetivo(float dt);
     void actualizarSoloPaseo(float dt);
     /*
-- @brief Actualiza la lógica del bichito (estado, movimiento) en cada ciclo del juego.
-- @details La vida NO baja aquí: el desgaste por segundo lo aplica el juego con cambiarVida(-1).
-- @param dt Incremento de tiempo transcurrido.
+     * @brief Actualiza la lógica del bichito (estado, movimiento) en cada ciclo del juego.
+     * @param dt Incremento de tiempo transcurrido.
      */
     void actualizar(float dt, ArregloDinamico<Comida>& comidas, Diccionario<int>& indicesComida,
                     const RTree& rtreeComida, ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices);
     
     /*
-- @brief Incrementa o decrementa la vida actual del bichito de forma segura (siempre queda entre 0 y 200).
-- @param delta Cantidad de vida a sumar (positiva) o restar (negativa).
+     * @brief Incrementa o decrementa la vida actual del bichito de forma segura (siempre queda entre 0 y 200).
+     * @param delta Cantidad de vida a sumar (positiva) o restar (negativa).
      */
     void cambiarVida(float delta);
 };
