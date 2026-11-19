@@ -90,7 +90,8 @@ MotorGrafico::MotorGrafico(ArregloDinamico<Bichito>& _poblacion, sf::Vector2f _t
     pausado(true),
     velocidadSim(1.0f),
     prioridadComida(1),
-    agentesCompetencia(5)
+    agentesCompetencia(5),
+    bichitosIniciales(POBLACION_INICIAL_GENERAL)
 {
     mezclarBolsaComida();
     inicializarParticulasClima();
@@ -280,7 +281,8 @@ void MotorGrafico::cargarSimulacionGeneral()
     // prospere y soporte los desastres naturales sin extinguirse de inmediato.
     const int rangoX = std::max(1, static_cast<int>(tamanoMundo.x) - 80);
     const int rangoY = std::max(1, static_cast<int>(tamanoMundo.y) - 80);
-    for (int i = 0; i < POBLACION_INICIAL_GENERAL; ++i) {
+    const int cantidadInicial = std::max(1, bichitosIniciales);
+    for (int i = 0; i < cantidadInicial; ++i) {
         const float x = 40.0f + static_cast<float>(std::rand() % rangoX);
         const float y = 40.0f + static_cast<float>(std::rand() % rangoY);
         const float vidaInicial = 40.0f + static_cast<float>(std::rand() % 56); // 40..95

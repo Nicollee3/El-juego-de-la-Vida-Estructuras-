@@ -63,6 +63,7 @@ private:
     float velocidadSim;     // multiplicador del tiempo (0.5x ... 4x)
     int prioridadComida;    // prioridad (1..3) de la comida que se coloca con clic
     int agentesCompetencia; // bichitos del Escenario 1
+    int bichitosIniciales;  // bichitos iniciales de la simulación general
 
     // Métodos de actualización de física y lógica
     void actualizarFisica(float dt);
@@ -116,6 +117,7 @@ public:
     int getPrioridadComida() const { return prioridadComida; }
 
     void setAgentesCompetencia(int n) { if (n >= 1) agentesCompetencia = n; }
+    void setBichitosIniciales(int n) { if (n >= 1 && n <= 300) bichitosIniciales = n; }
     void setDuracionEstacion(float segundos) { if (segundos > 0.0f) tiempoCambioEstacion = segundos; }
 
     void agregarBichito();

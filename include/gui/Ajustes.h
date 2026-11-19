@@ -9,7 +9,8 @@
 
 struct Ajustes
 {
-    int agentesCompetencia = 5;    // bichitos del Escenario 1 (competencia por 1 comida)
+    int bichitosIniciales = 60;     // bichitos al iniciar la simulación general (1..300)
+    int agentesCompetencia = 5;     // bichitos del Escenario 1 (competencia por 1 comida)
     float duracionEstacion = 10.0f; // segundos que dura cada estación
 };
 

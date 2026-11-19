@@ -11,6 +11,7 @@ PantallaSimulacion::PantallaSimulacion(Aplicacion& app)
                Etiqueta::Alineacion::Centro)
 {
     // Cargar ajustes del menú de Opciones
+    motor_.setBichitosIniciales(app.ajustes().bichitosIniciales);
     motor_.setAgentesCompetencia(app.ajustes().agentesCompetencia);
     motor_.setDuracionEstacion(app.ajustes().duracionEstacion);
 
