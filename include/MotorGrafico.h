@@ -70,6 +70,7 @@ private:
     int prioridadComida;    // prioridad (1..3) de la comida que se coloca con clic
     int agentesCompetencia; // bichitos del Escenario 1
     int bichitosIniciales;  // bichitos iniciales de la simulación general
+    int idBichitoSeleccionado; // ID del bichito inspeccionado con clic izquierdo (-1 = ninguno)
 
     // Métodos de actualización de física y lógica
     void actualizarFisica(float dt);
@@ -97,6 +98,7 @@ private:
     void actualizarEfectosClima(float dt);
     void dibujarEfectosEstacion(sf::RenderTarget& destino, const std::string& estacion) const;
     void dibujarAnimacionDesastre(sf::RenderTarget& destino) const;
+    void dibujarTooltipBichito(sf::RenderTarget& destino, GestorRecursos& recursos) const;
 
 public:
     // CAMBIO: recibe el tamaño del mundo en vez de crear la ventana.

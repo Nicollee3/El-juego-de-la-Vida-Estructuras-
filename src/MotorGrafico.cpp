@@ -70,6 +70,34 @@ namespace
         
         return sf::Color(70, 190, 255); // Azul celeste: Bichito estándar
     }
+
+    std::string nombreGenEstatico(GenEstatico gen)
+    {
+        switch (gen)
+        {
+        case GenEstatico::INMUNIDAD:         return "Inmunidad";
+        case GenEstatico::CANIBALISMO:       return "Canibalismo";
+        case GenEstatico::VAMPIRISMO:        return "Vampirismo";
+        case GenEstatico::TELETRANSPORTARSE: return "Teletransporte";
+        case GenEstatico::INMORTAL:          return "Inmortal";
+        case GenEstatico::ENFERMEDAD:        return "Enfermedad";
+        case GenEstatico::MITOSIS:           return "Mitosis";
+        case GenEstatico::NINGUNO:
+        default:                           return "Ninguno";
+        }
+    }
+
+    std::string nombreEstadoBichito(EstadoBichito est)
+    {
+        switch (est)
+        {
+        case EstadoBichito::BuscandoComida: return "Buscando comida";
+        case EstadoBichito::BuscandoPareja: return "Buscando pareja";
+        case EstadoBichito::Cazando:        return "Cazando presa";
+        case EstadoBichito::DePaseo:
+        default:                            return "De paseo";
+        }
+    }
     // ------------------------------------------------------------
 
     constexpr int POBLACION_INICIAL_GENERAL = 60;
@@ -129,7 +157,8 @@ MotorGrafico::MotorGrafico(ArregloDinamico<Bichito>& _poblacion, sf::Vector2f _t
     velocidadSim(1.0f),
     prioridadComida(1),
     agentesCompetencia(5),
-    bichitosIniciales(POBLACION_INICIAL_GENERAL)
+    bichitosIniciales(POBLACION_INICIAL_GENERAL),
+    idBichitoSeleccionado(-1)
 {
     mezclarBolsaComida();
     inicializarParticulasClima();
@@ -221,6 +250,7 @@ void MotorGrafico::vaciarPoblacion()
     tiempoSimulacion = 0.0f;
     muertesHambre = 0;
     muertesVejez = 0;
+    idBichitoSeleccionado = -1;
 }
 
 void MotorGrafico::registrarEnColaVejez(const Bichito& bichito)
@@ -447,8 +477,32 @@ void MotorGrafico::procesarEvento(const sf::Event& evento)
         evento.mouseButton.button == sf::Mouse::Left &&
         static_cast<float>(evento.mouseButton.x) < tamanoMundo.x &&
         static_cast<float>(evento.mouseButton.y) < tamanoMundo.y) {
-        agregarComida(static_cast<float>(evento.mouseButton.x),
-        static_cast<float>(evento.mouseButton.y), prioridadComida, 30, OrigenComida::Clic);
+
+        const float mx = static_cast<float>(evento.mouseButton.x);
+        const float my = static_cast<float>(evento.mouseButton.y);
+        const float radioClic = 20.0f;
+
+        int idEncontrado = -1;
+        float mejorDistSq = radioClic * radioClic;
+
+        for (int i = 0; i < poblacion.longitud(); ++i) {
+            const Bichito& b = poblacion.obtenerRef(i);
+            const float dx = b.getX() - mx;
+            const float dy = b.getY() - my;
+            const float distSq = dx * dx + dy * dy;
+            if (distSq <= mejorDistSq) {
+                mejorDistSq = distSq;
+                idEncontrado = b.getId();
+            }
+        }
+
+        if (idEncontrado != -1) {
+            idBichitoSeleccionado = (idBichitoSeleccionado == idEncontrado) ? -1 : idEncontrado;
+        } else if (idBichitoSeleccionado != -1) {
+            idBichitoSeleccionado = -1;
+        } else {
+            agregarComida(mx, my, prioridadComida, 30, OrigenComida::Clic);
+        }
     }
 }
 
@@ -706,6 +760,7 @@ void MotorGrafico::dibujar(sf::RenderTarget& destino, GestorRecursos& recursos)
 
     dibujarEfectosEstacion(destino, estacion);
     dibujarAnimacionDesastre(destino);
+    dibujarTooltipBichito(destino, recursos);
     dibujarAlertaDesastre(destino, recursos);
 }
 
@@ -1207,6 +1262,89 @@ void MotorGrafico::dibujarAnimacionDesastre(sf::RenderTarget& destino) const
     }
 
     (void)progreso;
+}
+
+void MotorGrafico::dibujarTooltipBichito(sf::RenderTarget& destino, GestorRecursos& recursos) const
+{
+    if (idBichitoSeleccionado == -1)
+        return;
+
+    int indice = -1;
+    if (!indicesBichitos.buscar(idBichitoSeleccionado, indice) ||
+        indice < 0 || indice >= poblacion.longitud())
+    {
+        return;
+    }
+
+    const Bichito& b = poblacion.obtenerRef(indice);
+    const Genoma gen = b.getGenetica();
+    const sf::Color colorGen = colorPorGenoma(gen);
+
+    // 1. Aro resaltado alrededor del bichito seleccionado
+    float radioBichito = 10.0f;
+    if (Config::BICHITO_CRECE)
+        radioBichito = 10.0f + b.getVida() / 10.0f;
+
+    sf::CircleShape aro(radioBichito + 5.0f);
+    aro.setOrigin(radioBichito + 5.0f, radioBichito + 5.0f);
+    aro.setPosition(std::round(b.getX()), std::round(b.getY()));
+    aro.setFillColor(sf::Color::Transparent);
+    aro.setOutlineThickness(2.5f);
+    aro.setOutlineColor(sf::Color(255, 235, 90, 240));
+    destino.draw(aro);
+
+    // 2. Armar texto con la información completa del bichito
+    const bool esInmortalTotal = b.esInmortal() ||
+                                gen.genEstatico1 == GenEstatico::INMORTAL ||
+                                gen.genEstatico2 == GenEstatico::INMORTAL;
+
+    const std::string edadStr = esInmortalTotal
+        ? "Inmortal"
+        : std::to_string(static_cast<int>(b.getEdadActual())) + " / " +
+          std::to_string(static_cast<int>(b.getEdadMaxima())) + " años";
+
+    const int metabEntero = static_cast<int>(gen.metabolismo);
+    const int metabDecimal = static_cast<int>(std::round((gen.metabolismo - metabEntero) * 10.0f));
+    const std::string metabStr = std::to_string(metabEntero) + "." + std::to_string(std::abs(metabDecimal));
+
+    const std::string info =
+        "Bichito #" + std::to_string(b.getId()) + "  [" + nombreEstadoBichito(b.getEstado()) + "]\n" +
+        "Vida: " + std::to_string(static_cast<int>(b.getVida())) + "  |  Edad: " + edadStr + "\n" +
+        "Vel: " + std::to_string(static_cast<int>(gen.velocidad)) + " px/s  |  Metab: " + metabStr + "\n" +
+        "Gen 1: " + nombreGenEstatico(gen.genEstatico1) + "\n" +
+        "Gen 2: " + nombreGenEstatico(gen.genEstatico2);
+
+    sf::Text texto(utf8(info), recursos.fuente(), 13);
+    texto.setFillColor(sf::Color(245, 248, 255));
+
+    const sf::FloatRect bounds = texto.getLocalBounds();
+    const float padX = 10.0f;
+    const float padY = 8.0f;
+    const float anchoCaja = bounds.width + padX * 2.0f;
+    const float altoCaja = bounds.height + padY * 2.0f;
+
+    // 3. Posicionar tarjeta encima del bichito sin salirse de los bordes del mapa
+    float cajaX = b.getX() - anchoCaja * 0.5f;
+    float cajaY = b.getY() - radioBichito - altoCaja - 12.0f;
+
+    if (cajaX < 8.0f)
+        cajaX = 8.0f;
+    if (cajaX + anchoCaja > tamanoMundo.x - 8.0f)
+        cajaX = tamanoMundo.x - anchoCaja - 8.0f;
+    if (cajaY < 8.0f)
+        cajaY = b.getY() + radioBichito + 12.0f;
+
+    sf::RectangleShape fondo(sf::Vector2f(anchoCaja, altoCaja));
+    fondo.setPosition(std::round(cajaX), std::round(cajaY));
+    fondo.setFillColor(sf::Color(16, 20, 32, 232));
+    fondo.setOutlineThickness(2.0f);
+    fondo.setOutlineColor(colorGen);
+
+    texto.setPosition(std::round(cajaX + padX - bounds.left),
+                    std::round(cajaY + padY - bounds.top));
+
+    destino.draw(fondo);
+    destino.draw(texto);
 }
     
 void MotorGrafico::mezclarBolsaComida()
