@@ -1,59 +1,74 @@
 #ifndef ARBOL_GENEALOGICO_H
 #define ARBOL_GENEALOGICO_H
 
-#include "Genoma.h"
 #include "ArregloDinamico.h"
+#include "Diccionario.h"
+#include "Genoma.h"
 
-/**
- * @struct NodoGenealogico
- * @brief Representa a un individuo en la historia familiar (esté vivo o muerto).
- */
-struct NodoGenealogico {
+struct NodoGenealogico
+{
     int idBichito;
-    bool estadoVida; // true = vivo, false = fallecido (persistencia post-muerte)[cite: 10, 11]
-    
-    // Atributos base rastreados por la GUI
-    float vidaMaxima;
-    float velocidad;
-    
-    NodoGenealogico* padre;
-    NodoGenealogico* madre;
-    
-    // Lista de hijos para mantener la estructura N-aria
+    int idPadre;
+    int idProgenitor;
+    int generacion;
+    bool estadoVida;
+    bool porMitosis;
+    bool mutacionFundadora;
+    GenesVariables genesVariables;
     ArregloDinamico<NodoGenealogico*> hijos;
 
-    NodoGenealogico(int id, float vMax, float vel) 
-        : idBichito(id), estadoVida(true), vidaMaxima(vMax), 
-        velocidad(vel), padre(nullptr), madre(nullptr) {}
+    NodoGenealogico(int id, int padre, int progenitor, int gen, bool mitosis,
+                    bool origenMutacion, const GenesVariables& genes)
+        : idBichito(id), idPadre(padre), idProgenitor(progenitor), generacion(gen),
+          estadoVida(true), porMitosis(mitosis), mutacionFundadora(origenMutacion),
+          genesVariables(genes) {}
 };
 
-/**
- * @class ArbolLinajeGen
- * @brief Maneja un árbol N-ario dedicado exclusivamente a rastrear la dispersión de un Gen Estático específico.
- * Totalmente desacoplado de las físicas para no afectar el rendimiento[cite: 10, 11].
- */
-class ArbolLinajeGen {
-private:
-    GenEstatico genRastreado;
-    ArregloDinamico<NodoGenealogico*> fundadores; // Raíces (los primeros en mutar o nacer con este gen)
-
+class ArbolLinajeGen
+{
 public:
-    ArbolLinajeGen(GenEstatico gen) : genRastreado(gen) {}
+    explicit ArbolLinajeGen(GenEstatico gen);
+    ~ArbolLinajeGen();
+    ArbolLinajeGen(const ArbolLinajeGen&) = delete;
+    ArbolLinajeGen& operator=(const ArbolLinajeGen&) = delete;
 
-    /**
-     * @brief Registra un nuevo portador en O(1)[cite: 10, 11].
-     */
-    void registrarPortador(int idHijo, float vMax, float vel, NodoGenealogico* nodoPadre, NodoGenealogico* nodoMadre);
-    
-    /**
-     * @brief Marca al portador como fallecido preservando la rama familiar en O(1)[cite: 10, 11].
-     */
-    void registrarMuerte(NodoGenealogico* nodo);
-    
-    /**
-     * @brief Recorrido en O(N) para la interfaz gráfica. Solo se ejecuta bajo demanda[cite: 10, 11].
-     */
-    void obtenerDispersianParaGUI(); 
+    void registrarPortador(int id, int idPadre, int idMadre, int generacion,
+                           bool porMitosis, const GenesVariables& genes);
+    void registrarMuerte(int id);
+    void limpiar();
+    bool buscar(int id, NodoGenealogico*& nodo) const;
+    int cantidadFundadores() const { return fundadores.longitud(); }
+    NodoGenealogico* fundador(int indice) { return fundadores.obtenerRef(indice); }
+    int cantidadPortadores() const { return nodos.getElementos(); }
+    GenEstatico genRastreado() const { return gen; }
+    bool estaBloqueado() const { return fundadores.longitud() > 0; }
+
+private:
+    static void destruirRama(NodoGenealogico* nodo);
+    GenEstatico gen;
+    ArregloDinamico<NodoGenealogico*> fundadores;
+    Diccionario<NodoGenealogico*> nodos;
 };
 
-#endif // ARBOL_GENEALOGICO_H
+class RegistroGenetico
+{
+public:
+    RegistroGenetico();
+    ArbolLinajeGen& arbol(GenEstatico gen);
+    const ArbolLinajeGen& arbol(GenEstatico gen) const;
+    void registrarBichito(int id, int idPadre, int idMadre, int generacion,
+                          bool porMitosis, const Genoma& genoma);
+    bool puedeMutar(GenEstatico gen) const;
+    void registrarMuerte(int id);
+    void limpiar();
+
+private:
+    ArbolLinajeGen inmunidad;
+    ArbolLinajeGen canibalismo;
+    ArbolLinajeGen vampirismo;
+    ArbolLinajeGen teletransporte;
+    ArbolLinajeGen inmortal;
+    ArbolLinajeGen mitosis;
+};
+
+#endif

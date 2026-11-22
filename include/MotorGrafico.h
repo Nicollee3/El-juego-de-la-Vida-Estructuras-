@@ -9,8 +9,10 @@
 #include "Cola.h"
 #include "ColaCircular.h"
 #include "Diccionario.h"
+#include "ArbolGenealogico.h"
 #include "MotorDesastres.h"
 #include "RTree.h"
+#include "gui/PanelGenetica.h"
 
 class GestorRecursos; // declaración adelantada
 
@@ -29,6 +31,8 @@ private:
     Diccionario<int> indicesComida;
     Cola<int> colaEliminacion;
     ColaPrioridadVejez colaVejez;
+    RegistroGenetico registroGenetico;
+    PanelGenetica panelGenetica;
     ColaCircular estaciones;
     MotorDesastres motorDesastres;
     float tiempoSimulacion;
@@ -80,6 +84,8 @@ private:
     void encolarCondenados();
     void procesarColaEliminacion(int elementosPendientes);
     void registrarEnColaVejez(const Bichito& bichito);
+    void registrarEnArbolGenealogico(const Bichito& bichito);
+    void intentarMutarGenEstatico(Bichito& bichito);
     void procesarMuertesPorHambre();
     void procesarMuertesPorVejez();
     void agregarBichitoAlFinal(Bichito bichito);
@@ -98,7 +104,6 @@ private:
     void actualizarEfectosClima(float dt);
     void dibujarEfectosEstacion(sf::RenderTarget& destino, const std::string& estacion) const;
     void dibujarAnimacionDesastre(sf::RenderTarget& destino) const;
-    void dibujarTooltipBichito(sf::RenderTarget& destino, GestorRecursos& recursos) const;
 
 public:
     // CAMBIO: recibe el tamaño del mundo en vez de crear la ventana.
@@ -107,6 +112,7 @@ public:
     // CAMBIO: desaparece ejecutar(); su trabajo se reparte en estos tres métodos
     // que llama PantallaSimulacion en cada frame.
     void procesarEvento(const sf::Event& evento);
+    bool cerrarArbolGenetico() { return panelGenetica.cerrarArbol(); }
     void actualizar(float dt);
     void dibujar(sf::RenderTarget& destino, GestorRecursos& recursos);
 

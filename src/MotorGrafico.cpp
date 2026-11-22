@@ -37,21 +37,7 @@ namespace
     // --- NUEVO CÓDIGO GENÉTICO: Generación y colores por gen ---
     Genoma generarGenomaInicial()
     {
-        // Velocidad aleatoria entre 85 y 155 (acopla automáticamente su metabolismo)
-        float vel = 85.0f + static_cast<float>(std::rand() % 71);
-        
-        // ~45% nacen normales (NINGUNO), ~55% nacen con algún gen estático inicial
-        auto sortearGen = []() -> GenEstatico {
-            int r = std::rand() % 100;
-            if (r < 45) return GenEstatico::NINGUNO;
-            return static_cast<GenEstatico>(1 + (std::rand() % 7));
-        };
-
-        GenEstatico g1 = sortearGen();
-        GenEstatico g2 = sortearGen();
-        if (g1 != GenEstatico::NINGUNO && g1 == g2) g2 = GenEstatico::NINGUNO;
-
-        return Genoma(vel, g1, g2);
+        return Genoma(120.0f);
     }
 
     sf::Color colorPorGenoma(const Genoma& g)
@@ -60,48 +46,21 @@ namespace
             return g.genEstatico1 == buscado || g.genEstatico2 == buscado;
         };
 
-        if (tiene(GenEstatico::CANIBALISMO))       return sf::Color(235, 50, 50);   // Rojo: Caníbal
-        if (tiene(GenEstatico::VAMPIRISMO))        return sf::Color(165, 25, 95);   // Vinotinto/Magenta: Vampiro
-        if (tiene(GenEstatico::INMORTAL))          return sf::Color(185, 110, 255); // Morado: Inmortal
-        if (tiene(GenEstatico::INMUNIDAD))         return sf::Color(255, 215, 40);  // Dorado: Inmune
-        if (tiene(GenEstatico::ENFERMEDAD))        return sf::Color(130, 230, 60);  // Verde tóxico: Enfermo
-        if (tiene(GenEstatico::TELETRANSPORTARSE)) return sf::Color(50, 240, 220);  // Turquesa: Teletransporte
-        if (tiene(GenEstatico::MITOSIS))           return sf::Color(255, 155, 60);  // Naranja: Mitosis
-        
+        if (tiene(GenEstatico::CANIBALISMO)) return sf::Color(32, 110, 165);
         return sf::Color(70, 190, 255); // Azul celeste: Bichito estándar
     }
 
-    std::string nombreGenEstatico(GenEstatico gen)
-    {
-        switch (gen)
-        {
-        case GenEstatico::INMUNIDAD:         return "Inmunidad";
-        case GenEstatico::CANIBALISMO:       return "Canibalismo";
-        case GenEstatico::VAMPIRISMO:        return "Vampirismo";
-        case GenEstatico::TELETRANSPORTARSE: return "Teletransporte";
-        case GenEstatico::INMORTAL:          return "Inmortal";
-        case GenEstatico::ENFERMEDAD:        return "Enfermedad";
-        case GenEstatico::MITOSIS:           return "Mitosis";
-        case GenEstatico::NINGUNO:
-        default:                           return "Ninguno";
-        }
-    }
-
-    std::string nombreEstadoBichito(EstadoBichito est)
-    {
-        switch (est)
-        {
-        case EstadoBichito::BuscandoComida: return "Buscando comida";
-        case EstadoBichito::BuscandoPareja: return "Buscando pareja";
-        case EstadoBichito::Cazando:        return "Cazando presa";
-        case EstadoBichito::DePaseo:
-        default:                            return "De paseo";
-        }
-    }
-    // ------------------------------------------------------------
-
-    constexpr int POBLACION_INICIAL_GENERAL = 60;
-    constexpr float ANIOS_POR_SEGUNDO = 5.0f; // 20 años -> 4s, 200 años -> 40s, 400 años -> 80s
+    constexpr int POBLACION_INICIAL_GENERAL = 10;
+    constexpr float ANIOS_POR_SEGUNDO = 2.5f; // 90 años de vida base -> 36s de simulación
+    constexpr float PROBABILIDAD_MUTACION_GEN_ESTATICO = 0.05f;
+    constexpr std::array<GenEstatico, 6> GENES_ESTATICOS = {
+        GenEstatico::INMUNIDAD,
+        GenEstatico::CANIBALISMO,
+        GenEstatico::VAMPIRISMO,
+        GenEstatico::TELETRANSPORTARSE,
+        GenEstatico::INMORTAL,
+        GenEstatico::MITOSIS
+    };
 
     sf::String utf8(const std::string& texto)
     {
@@ -196,9 +155,11 @@ void MotorGrafico::agregarBichitoAlFinal(Bichito bichito)
         bichito.setId(idDisponible);
     }
 
+    intentarMutarGenEstatico(bichito);
     poblacion.generar(bichito);
     indicesBichitos.insertar(bichito.getId(), poblacion.longitud() - 1);
     registrarEnColaVejez(bichito);
+    registrarEnArbolGenealogico(bichito);
 }
 
 void MotorGrafico::eliminarBichitoEn(int indice, bool retirarDeCola)
@@ -212,6 +173,8 @@ void MotorGrafico::eliminarBichitoEn(int indice, bool retirarDeCola)
     {
         colaEliminacion.eliminar(idEliminado);
     }
+    registroGenetico.registrarMuerte(idEliminado);
+    panelGenetica.marcarFallecido(idEliminado);
     indicesBichitos.eliminar(idEliminado);
     poblacion.morir(indice);
     if (indice != ultimoIndice)
@@ -247,6 +210,8 @@ void MotorGrafico::vaciarPoblacion()
     indicesBichitos.vaciar();
     colaEliminacion.vaciar();
     colaVejez.vaciar();
+    registroGenetico.limpiar();
+    panelGenetica.cerrar();
     tiempoSimulacion = 0.0f;
     muertesHambre = 0;
     muertesVejez = 0;
@@ -261,6 +226,35 @@ void MotorGrafico::registrarEnColaVejez(const Bichito& bichito)
     const float aniosRestantes = std::max(0.0f, bichito.getEdadMaxima() - bichito.getEdadActual());
     const float segundosRestantes = aniosRestantes / ANIOS_POR_SEGUNDO;
     colaVejez.insertar(bichito.getId(), tiempoSimulacion + segundosRestantes, bichito.getEdadMaxima());
+}
+
+void MotorGrafico::registrarEnArbolGenealogico(const Bichito& bichito)
+{
+    registroGenetico.registrarBichito(
+        bichito.getId(), bichito.getIdPadre(), bichito.getIdMadre(),
+        bichito.getGeneracion(), bichito.nacioPorMitosis(), bichito.getGenetica());
+}
+
+void MotorGrafico::intentarMutarGenEstatico(Bichito& bichito)
+{
+    if (bichito.getGeneracion() <= 1 ||
+        static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX) >=
+            PROBABILIDAD_MUTACION_GEN_ESTATICO)
+        return;
+
+    std::array<GenEstatico, GENES_ESTATICOS.size()> disponibles{};
+    std::size_t cantidadDisponibles = 0;
+    for (GenEstatico gen : GENES_ESTATICOS)
+    {
+        if (registroGenetico.puedeMutar(gen) && !bichito.tieneGen(gen))
+            disponibles[cantidadDisponibles++] = gen;
+    }
+
+    if (cantidadDisponibles == 0)
+        return;
+
+    const std::size_t indice = static_cast<std::size_t>(std::rand()) % cantidadDisponibles;
+    bichito.agregarGenEstatico(disponibles[indice]);
 }
 
 void MotorGrafico::procesarMuertesPorHambre()
@@ -290,6 +284,11 @@ void MotorGrafico::procesarMuertesPorVejez()
 
         const Bichito& b = poblacion.obtenerRef(indice);
         if (b.esInmortal())
+            continue;
+        const float muerteEsperada = tiempoSimulacion +
+            std::max(0.0f, b.getEdadMaxima() - b.getEdadActual()) / ANIOS_POR_SEGUNDO;
+        if (b.getEdadActual() < b.getEdadMaxima() &&
+            muerteEsperada - tope.tiempoMuerte > 0.05f)
             continue;
 
         ++muertesVejez;
@@ -366,7 +365,7 @@ void MotorGrafico::agregarBichito()
     const float x = 40.0f + static_cast<float>(std::rand() % rangoX);
     const float y = 40.0f + static_cast<float>(std::rand() % rangoY);
 
-    // MODIFICADO: Nace con genoma aleatorio inicial
+    // Los bichitos iniciales nacen sin genes estáticos.
     Bichito b(idNuevo++, 40.0f, x, y, generarGenomaInicial());
     agregarBichitoAlFinal(b);
 }
@@ -393,7 +392,7 @@ void MotorGrafico::cargarSimulacionGeneral()
         const float y = 40.0f + static_cast<float>(std::rand() % rangoY);
         const float vidaInicial = 40.0f + static_cast<float>(std::rand() % 56);
         
-        // MODIFICADO: Cada fundador nace con su propio genoma aleatorio
+        // Todos los fundadores nacen sin genes estáticos.
         Bichito b(i + 1, vidaInicial, x, y, generarGenomaInicial());
         agregarBichitoAlFinal(b);
     }
@@ -463,6 +462,9 @@ void MotorGrafico::cargarEscenarioReproduccion()
 
 void MotorGrafico::procesarEvento(const sf::Event& evento)
 {
+    if (panelGenetica.procesarEvento(evento, registroGenetico))
+        return;
+
     if (evento.type == sf::Event::KeyPressed) {
         if (evento.key.code == sf::Keyboard::Num1) {
             cargarEscenarioCompetencia();
@@ -497,10 +499,18 @@ void MotorGrafico::procesarEvento(const sf::Event& evento)
         }
 
         if (idEncontrado != -1) {
-            idBichitoSeleccionado = (idBichitoSeleccionado == idEncontrado) ? -1 : idEncontrado;
-        } else if (idBichitoSeleccionado != -1) {
-            idBichitoSeleccionado = -1;
+            if (idBichitoSeleccionado == idEncontrado) {
+                idBichitoSeleccionado = -1;
+                panelGenetica.cerrar();
+            } else {
+                idBichitoSeleccionado = idEncontrado;
+                int indice = -1;
+                if (indicesBichitos.buscar(idEncontrado, indice))
+                    panelGenetica.seleccionar(poblacion.obtenerRef(indice));
+            }
         } else {
+            idBichitoSeleccionado = -1;
+            panelGenetica.cerrar();
             agregarComida(mx, my, prioridadComida, 30, OrigenComida::Clic);
         }
     }
@@ -634,6 +644,8 @@ void MotorGrafico::procesarEscenarioReproduccion(float dt)
 
                 int nuevoId = poblacion.longitud() + 100;
                 Bichito hijo(nuevoId, 40.0f, hijoX, hijoY);
+                hijo.setGeneracion(std::max(b1.getGeneracion(), b2.getGeneracion()) + 1);
+                hijo.setPadres(b1.getId(), b2.getId(), false);
                 hijo.setTarget(hijoX + (rand() % 100 - 50), hijoY + (rand() % 100 - 50));
                 agregarBichitoAlFinal(hijo);
 
@@ -694,10 +706,16 @@ void MotorGrafico::procesarSimulacionGeneral(float dt)
     const int poblacionAntes = poblacion.longitud();
     for (int i = 0; i < poblacionAntes; ++i) {
         Bichito &bichito = poblacion.obtenerRef(i);
-        bichito.actualizar(dt, comidasActivas, indicesComida, rtreeComida, poblacion, indicesBichitos);
+        const std::string nombreEstacion = estaciones.obtener_actual().nombre;
+        bichito.actualizar(dt, comidasActivas, indicesComida, rtreeComida,
+                           poblacion, indicesBichitos,
+                           nombreEstacion == "Verano", nombreEstacion == "Invierno");
     }
     for (int i = poblacionAntes; i < poblacion.longitud(); ++i) {
-        registrarEnColaVejez(poblacion.obtenerRef(i));
+        Bichito& bichito = poblacion.obtenerRef(i);
+        intentarMutarGenEstatico(bichito);
+        registrarEnColaVejez(bichito);
+        registrarEnArbolGenealogico(bichito);
     }
     
     for (int i = comidasActivas.longitud() - 1; i >= 0; --i) {
@@ -740,6 +758,27 @@ void MotorGrafico::dibujar(sf::RenderTarget& destino, GestorRecursos& recursos)
     for (int i = 0; i < poblacion.longitud(); ++i) {
         const Bichito& b = poblacion.obtenerRef(i);
 
+        if (b.tieneGen(GenEstatico::VAMPIRISMO))
+        {
+            sf::CircleShape aura(45.0f);
+            aura.setOrigin(45.0f, 45.0f);
+            aura.setPosition(b.getX(), b.getY());
+            aura.setFillColor(sf::Color(170, 45, 105, 24));
+            aura.setOutlineThickness(1.0f);
+            aura.setOutlineColor(sf::Color(210, 80, 145, 75));
+            destino.draw(aura);
+        }
+        if (b.getDestelloTeletransporte() > 0.0f)
+        {
+            const sf::Uint8 alpha = static_cast<sf::Uint8>(
+                180.0f * std::min(1.0f, b.getDestelloTeletransporte() / 0.18f));
+            sf::CircleShape destello(25.0f);
+            destello.setOrigin(25.0f, 25.0f);
+            destello.setPosition(b.getX(), b.getY());
+            destello.setFillColor(sf::Color(120, 230, 255, alpha));
+            destino.draw(destello);
+        }
+
         const sf::Texture& tex = recursos.textura("entidades/bichito", sf::Vector2u(16, 16),
         sf::Color::White, Forma::Circulo);
         sf::Sprite sprite(tex);
@@ -756,12 +795,27 @@ void MotorGrafico::dibujar(sf::RenderTarget& destino, GestorRecursos& recursos)
 
         sprite.setPosition(std::round(b.getX()), std::round(b.getY()));
         destino.draw(sprite);
+
+        if (b.getId() == idBichitoSeleccionado)
+        {
+            const float radioResalte = diametro * 0.5f + 6.0f;
+            sf::CircleShape resalte(radioResalte);
+            resalte.setOrigin(radioResalte, radioResalte);
+            resalte.setPosition(std::round(b.getX()), std::round(b.getY()));
+            resalte.setFillColor(sf::Color::Transparent);
+            resalte.setOutlineThickness(3.0f);
+            resalte.setOutlineColor(sf::Color(255, 230, 90, 245));
+            destino.draw(resalte);
+        }
     }
 
     dibujarEfectosEstacion(destino, estacion);
     dibujarAnimacionDesastre(destino);
-    dibujarTooltipBichito(destino, recursos);
     dibujarAlertaDesastre(destino, recursos);
+    int indiceSeleccionado = -1;
+    if (indicesBichitos.buscar(idBichitoSeleccionado, indiceSeleccionado))
+        panelGenetica.actualizarSeleccion(poblacion.obtenerRef(indiceSeleccionado));
+    panelGenetica.dibujar(destino, recursos, registroGenetico);
 }
 
 void MotorGrafico::mostrarAlertaDesastre(const ResultadoDesastre& resultado)
@@ -1264,89 +1318,6 @@ void MotorGrafico::dibujarAnimacionDesastre(sf::RenderTarget& destino) const
     (void)progreso;
 }
 
-void MotorGrafico::dibujarTooltipBichito(sf::RenderTarget& destino, GestorRecursos& recursos) const
-{
-    if (idBichitoSeleccionado == -1)
-        return;
-
-    int indice = -1;
-    if (!indicesBichitos.buscar(idBichitoSeleccionado, indice) ||
-        indice < 0 || indice >= poblacion.longitud())
-    {
-        return;
-    }
-
-    const Bichito& b = poblacion.obtenerRef(indice);
-    const Genoma gen = b.getGenetica();
-    const sf::Color colorGen = colorPorGenoma(gen);
-
-    // 1. Aro resaltado alrededor del bichito seleccionado
-    float radioBichito = 10.0f;
-    if (Config::BICHITO_CRECE)
-        radioBichito = 10.0f + b.getVida() / 10.0f;
-
-    sf::CircleShape aro(radioBichito + 5.0f);
-    aro.setOrigin(radioBichito + 5.0f, radioBichito + 5.0f);
-    aro.setPosition(std::round(b.getX()), std::round(b.getY()));
-    aro.setFillColor(sf::Color::Transparent);
-    aro.setOutlineThickness(2.5f);
-    aro.setOutlineColor(sf::Color(255, 235, 90, 240));
-    destino.draw(aro);
-
-    // 2. Armar texto con la información completa del bichito
-    const bool esInmortalTotal = b.esInmortal() ||
-                                gen.genEstatico1 == GenEstatico::INMORTAL ||
-                                gen.genEstatico2 == GenEstatico::INMORTAL;
-
-    const std::string edadStr = esInmortalTotal
-        ? "Inmortal"
-        : std::to_string(static_cast<int>(b.getEdadActual())) + " / " +
-          std::to_string(static_cast<int>(b.getEdadMaxima())) + " años";
-
-    const int metabEntero = static_cast<int>(gen.metabolismo);
-    const int metabDecimal = static_cast<int>(std::round((gen.metabolismo - metabEntero) * 10.0f));
-    const std::string metabStr = std::to_string(metabEntero) + "." + std::to_string(std::abs(metabDecimal));
-
-    const std::string info =
-        "Bichito #" + std::to_string(b.getId()) + "  [" + nombreEstadoBichito(b.getEstado()) + "]\n" +
-        "Vida: " + std::to_string(static_cast<int>(b.getVida())) + "  |  Edad: " + edadStr + "\n" +
-        "Vel: " + std::to_string(static_cast<int>(gen.velocidad)) + " px/s  |  Metab: " + metabStr + "\n" +
-        "Gen 1: " + nombreGenEstatico(gen.genEstatico1) + "\n" +
-        "Gen 2: " + nombreGenEstatico(gen.genEstatico2);
-
-    sf::Text texto(utf8(info), recursos.fuente(), 13);
-    texto.setFillColor(sf::Color(245, 248, 255));
-
-    const sf::FloatRect bounds = texto.getLocalBounds();
-    const float padX = 10.0f;
-    const float padY = 8.0f;
-    const float anchoCaja = bounds.width + padX * 2.0f;
-    const float altoCaja = bounds.height + padY * 2.0f;
-
-    // 3. Posicionar tarjeta encima del bichito sin salirse de los bordes del mapa
-    float cajaX = b.getX() - anchoCaja * 0.5f;
-    float cajaY = b.getY() - radioBichito - altoCaja - 12.0f;
-
-    if (cajaX < 8.0f)
-        cajaX = 8.0f;
-    if (cajaX + anchoCaja > tamanoMundo.x - 8.0f)
-        cajaX = tamanoMundo.x - anchoCaja - 8.0f;
-    if (cajaY < 8.0f)
-        cajaY = b.getY() + radioBichito + 12.0f;
-
-    sf::RectangleShape fondo(sf::Vector2f(anchoCaja, altoCaja));
-    fondo.setPosition(std::round(cajaX), std::round(cajaY));
-    fondo.setFillColor(sf::Color(16, 20, 32, 232));
-    fondo.setOutlineThickness(2.0f);
-    fondo.setOutlineColor(colorGen);
-
-    texto.setPosition(std::round(cajaX + padX - bounds.left),
-                    std::round(cajaY + padY - bounds.top));
-
-    destino.draw(fondo);
-    destino.draw(texto);
-}
-    
 void MotorGrafico::mezclarBolsaComida()
 {
     for (int i = static_cast<int>(bolsaComida.size()) - 1; i > 0; --i) {

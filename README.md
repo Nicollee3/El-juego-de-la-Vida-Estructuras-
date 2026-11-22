@@ -12,6 +12,15 @@ sigue funcionando aunque cambie el nombre o la ubicación de la carpeta.
   aún no está seleccionado y usa el botón triangular de CMake Tools en la barra
   de estado.
 
+## Genes estáticos y mutaciones
+
+- Los fundadores empiezan sin genes estáticos.
+- Cada descendiente tiene un `5%` de probabilidad de mutar a un gen estático que
+  todavía no haya aparecido en la simulación.
+- El primer portador de cada gen inicia su linaje en el árbol genealógico y
+  bloquea nuevas mutaciones independientes de ese gen. Sus descendientes sí
+  pueden heredarlo.
+
 ## Las 3 formas en las que mueren los bichitos
 
 Cada vez que un bichito muere (por cualquiera de las 3 causas) se elimina del `ArregloDinamico` en **O(1)** mediante *swap-and-pop* y se actualiza su índice en el `Diccionario` (`indicesBichitos`).
@@ -22,7 +31,7 @@ Cada vez que un bichito muere (por cualquiera de las 3 causas) se elimina del `A
    - Aplica para **todos** los bichitos, **incluidos los inmortales** (es la única forma en que un inmortal puede morir).
 
 2. **Muerte por Vejez (`edadActual >= edadMaxima`) — Min-Heap (`ColaPrioridadVejez`):**
-   - Cada bichito tiene `edadActual` (avanza a `5 años/s`) y `edadMaxima` predestinada por su linaje (`20` a `400` años; los hijos heredan el promedio de sus padres con `±15%` de variación).
+   - Cada bichito tiene `edadActual` (avanza a `2.5 años/s`) y `edadMaxima` predestinada por su linaje (`20` a `400` años; los hijos heredan el promedio de sus padres con `±15%` de variación).
    - Al nacer un bichito mortal se inserta en una **Cola con Prioridad (Min-Heap)** ordenada por el instante exacto en que cumplirá su `edadMaxima` (`O(log n)`).
    - Cada frame se revisa la raíz en **O(1)**: si ya cumplió su edad máxima, se extrae (`O(log n)`), deja comida y muere en O(1) con *swap-and-pop*. Los inmortales no entran a esta cola.
 

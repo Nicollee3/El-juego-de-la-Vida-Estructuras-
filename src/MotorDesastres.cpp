@@ -68,13 +68,9 @@ PerfilReaper MotorDesastres::perfilPorDefecto(const Bichito &bichito)
     perfil.vida = bichito.getVida();
     perfil.edad = bichito.getEdadActual();
     perfil.edadMaxima = bichito.getEdadMaxima();
-    perfil.inmortal = bichito.esInmortal();
-
-    // TODO(Parte 1): cuando se integren los genes estáticos en Bichito, conectar aquí:
-    //   perfil.enfermo  = bichito.tieneGen(GenEstatico::Enfermedad);
-    //   perfil.inmune   = bichito.tieneGen(GenEstatico::Inmunidad);
+    perfil.inmortal = bichito.tieneGen(GenEstatico::INMORTAL);
     perfil.enfermo = false;
-    perfil.inmune = false;
+    perfil.inmune = bichito.tieneGen(GenEstatico::INMUNIDAD);
     return perfil;
 }
 

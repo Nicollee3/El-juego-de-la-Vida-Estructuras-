@@ -43,7 +43,6 @@ private:
     int id;
     float vida;
     float edadActual;
-    float edadMaxima;
     bool inmortal;
     float x, y;
     float targetX, targetY;
@@ -52,8 +51,14 @@ private:
     float tiempoCercaPareja;
     int idParejaObjetivo;
     float cooldownReproduccion;
+    float cooldownTeletransporte;
+    float destelloTeletransporte;
     bool siguiendoComida;
     bool condenado;
+    int generacion;
+    int idPadre;
+    int idMadre;
+    bool nacidoPorMitosis;
 
     // NUEVO ATRIBUTO: El genoma que almacena los 2 genes estáticos y el metabolismo acoplado a la velocidad.
     Genoma genetica;
@@ -76,8 +81,8 @@ private:
     // NUEVO MÉTODO PRIVADO: Exclusivo para bichitos con el gen Caníbal
     void buscarPresa(ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices);
 
-    void buscarPareja(ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices, float dt);
-    void reproducirseCon(Bichito& pareja, ArregloDinamico<Bichito>& poblacion,
+    bool buscarPareja(ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices, float dt);
+    bool reproducirseCon(Bichito& pareja, ArregloDinamico<Bichito>& poblacion,
                          Diccionario<int>& indices);
 
 public:
@@ -96,7 +101,9 @@ public:
     int getId() const { return id; }
     float getVida() const { return vida; }
     float getEdadActual() const { return edadActual; }
-    float getEdadMaxima() const { return edadMaxima; }
+    float getEdadMaxima() const { return genetica.edadMax; }
+    float getVidaMaxima() const { return genetica.vidaMax; }
+    float getMetabolismo() const { return genetica.metabolismo; }
     bool esInmortal() const { return inmortal; }
     float getX() const { return x; }
     float getY() const { return y; }
@@ -107,18 +114,38 @@ public:
     float getTiempoCercaPareja() const { return tiempoCercaPareja; }
     int getIdParejaObjetivo() const { return idParejaObjetivo; }
     float getCooldownReproduccion() const { return cooldownReproduccion; }
+    float getDestelloTeletransporte() const { return destelloTeletransporte; }
     
     // NUEVO GETTER: Para acceder a los genes desde fuera (ej. para el Árbol Genealógico)
     Genoma getGenetica() const { return genetica; }
+    bool tieneGen(GenEstatico gen) const;
+    bool agregarGenEstatico(GenEstatico gen);
+    int getGeneracion() const { return generacion; }
+    int getIdPadre() const { return idPadre; }
+    int getIdMadre() const { return idMadre; }
+    bool nacioPorMitosis() const { return nacidoPorMitosis; }
 
     void setId(int _id) { id = _id; }
     bool setVida(float _vida);
     void setEdadActual(float _edad) { edadActual = (_edad >= 0.0f) ? _edad : 0.0f; }
     void setEdadMaxima(float _edadMax);
-    void setInmortal(bool _inm) { inmortal = _inm; }
+    void setInmortal(bool _inm)
+    {
+        inmortal = _inm;
+        velocidad = genetica.velocidad *
+                    (estado == EstadoBichito::DePaseo ? 0.5f : 1.0f) *
+                    (inmortal ? 0.60f : 1.0f);
+    }
+    void setGeneracion(int g) { generacion = g > 0 ? g : 1; }
+    void setPadres(int padre, int madre, bool mitosis)
+    {
+        idPadre = padre;
+        idMadre = madre;
+        nacidoPorMitosis = mitosis;
+    }
     void envejecer(float dt) { if (dt > 0.0f) edadActual += dt; }
     bool murioDeHambre() const { return vida <= 0.0f; }
-    bool murioPorVejez() const { return (!inmortal && edadActual >= edadMaxima); }
+    bool murioPorVejez() const { return (!inmortal && edadActual >= genetica.edadMax); }
     
     void setPosicion(float _x, float _y)
     {
@@ -130,13 +157,13 @@ public:
         targetX = _tx;
         targetY = _ty;
     }
-    // SETTER MODIFICADO: Al cambiar la velocidad, protege contra valores mínimos y actualiza el metabolismo
+    // SETTER: actualiza la velocidad heredable sin alterar el gen de metabolismo.
     void setVelocidad(float _v) 
     { 
-        float velSegura = (_v < 30.0f) ? 120.0f : _v;
-        velocidad = velSegura; 
+        float velSegura = (_v < 1.0f) ? 120.0f : _v;
         genetica.velocidad = velSegura;
-        genetica.metabolismo = velSegura * 0.10f; 
+        velocidad = velSegura * (estado == EstadoBichito::DePaseo ? 0.5f : 1.0f) *
+                    (inmortal ? 0.60f : 1.0f);
     }
     void setEstado(EstadoBichito _e) { estado = _e; }
     void setTiempoCercaPareja(float _t) { tiempoCercaPareja = _t; }
@@ -157,7 +184,8 @@ public:
      * @param dt Incremento de tiempo transcurrido.
      */
     void actualizar(float dt, ArregloDinamico<Comida>& comidas, Diccionario<int>& indicesComida,
-                    const RTree& rtreeComida, ArregloDinamico<Bichito>& poblacion, Diccionario<int>& indices);
+                    const RTree& rtreeComida, ArregloDinamico<Bichito>& poblacion,
+                    Diccionario<int>& indices, bool verano = false, bool invierno = false);
     
     /*
      * @brief Incrementa o decrementa la vida actual del bichito de forma segura (siempre queda entre 0 y 200).

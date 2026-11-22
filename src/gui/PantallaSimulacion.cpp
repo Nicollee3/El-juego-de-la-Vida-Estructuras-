@@ -25,6 +25,8 @@ void PantallaSimulacion::procesarEvento(const sf::Event& evento)
     {
         if (evento.key.code == sf::Keyboard::Escape)
         {
+            if (motor_.cerrarArbolGenetico())
+                return;
             app_.irA(EstadoApp::Menu);
             return;
         }
