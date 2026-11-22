@@ -112,6 +112,21 @@ void PanelGenetica::marcarFallecido(int id)
     }
 }
 
+bool PanelGenetica::abrirArbol(GenEstatico gen, RegistroGenetico& registro)
+{
+    if (gen == GenEstatico::NINGUNO || registro.arbol(gen).cantidadFundadores() == 0)
+        return false;
+
+    visible = false;
+    arbolActivo = true;
+    genMostrado = gen;
+    indiceFundador = 0;
+    zoom = 1.0f;
+    desplazamiento = sf::Vector2f(0.0f, 0.0f);
+    arrastrando = false;
+    return true;
+}
+
 void PanelGenetica::cerrar()
 {
     visible = false;

@@ -14,6 +14,7 @@ public:
     void seleccionar(const Bichito& bichito);
     void actualizarSeleccion(const Bichito& bichito);
     void marcarFallecido(int id);
+    bool abrirArbol(GenEstatico gen, RegistroGenetico& registro);
     void cerrar();
     bool cerrarArbol();
     bool arbolAbierto() const { return arbolActivo; }

@@ -12,6 +12,7 @@
 #include "ArregloDinamico.h"
 #include "gui/BarraLateral.h"
 #include "gui/Etiqueta.h"
+#include "gui/PanelGenes.h"
 #include "gui/Pantalla.h"
 
 class PantallaSimulacion : public Pantalla
@@ -28,6 +29,7 @@ private:
     ArregloDinamico<Bichito> poblacion_;
     MotorGrafico motor_;
     BarraLateral barra_;
+    PanelGenes panelGenes_;
     Etiqueta etPausa_;
 };
 

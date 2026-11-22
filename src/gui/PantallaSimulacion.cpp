@@ -7,6 +7,7 @@ PantallaSimulacion::PantallaSimulacion(Aplicacion& app)
       poblacion_(),
       motor_(poblacion_, sf::Vector2f(Config::ANCHO_MUNDO, Config::ALTO_MUNDO)),
       barra_(app.recursos(), motor_, [this] { app_.irA(EstadoApp::Menu); }),
+      panelGenes_(app.recursos(), motor_),
       etPausa_(app.recursos(), "PAUSA", 32, sf::Vector2f(Config::ANCHO_MUNDO / 2.0f, 40.0f),
                Etiqueta::Alineacion::Centro)
 {
@@ -27,12 +28,22 @@ void PantallaSimulacion::procesarEvento(const sf::Event& evento)
         {
             if (motor_.cerrarArbolGenetico())
                 return;
+            if (panelGenes_.cerrarSelector())
+                return;
             app_.irA(EstadoApp::Menu);
             return;
         }
         if (evento.key.code == sf::Keyboard::Space)
             motor_.setPausa(!motor_.estaPausado());
     }
+
+    if (motor_.arbolGeneticoAbierto())
+    {
+        motor_.procesarEvento(evento);
+        return;
+    }
+    if (panelGenes_.procesarEvento(evento))
+        return;
 
     barra_.procesarEvento(evento);  // botones de la barra
     motor_.procesarEvento(evento);  // teclas 1/2/R y clic para colocar comida
@@ -49,5 +60,6 @@ void PantallaSimulacion::dibujar(sf::RenderTarget& destino)
     motor_.dibujar(destino, app_.recursos());
     if (motor_.estaPausado())
         etPausa_.dibujar(destino);
+    panelGenes_.dibujar(destino);
     barra_.dibujar(destino);
 }

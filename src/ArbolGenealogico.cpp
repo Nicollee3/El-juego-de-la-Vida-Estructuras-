@@ -27,7 +27,8 @@ void ArbolLinajeGen::destruirRama(NodoGenealogico* nodo)
 
 void ArbolLinajeGen::registrarPortador(int id, int idPadre, int idMadre,
                                        int generacion, bool porMitosis,
-                                       const GenesVariables& genes)
+                                       const GenesVariables& genes,
+                                       bool permitirFundadorAdicional)
 {
     if (nodos.contiene(id))
         return;
@@ -38,7 +39,7 @@ void ArbolLinajeGen::registrarPortador(int id, int idPadre, int idMadre,
     if (padre == nullptr && idMadre >= 0)
         nodos.buscar(idMadre, padre);
 
-    if (padre == nullptr && estaBloqueado())
+    if (padre == nullptr && estaBloqueado() && !permitirFundadorAdicional)
         return;
 
     const int idPadreRama = padre == nullptr ? -1 : padre->idBichito;
@@ -101,7 +102,8 @@ bool RegistroGenetico::puedeMutar(GenEstatico gen) const
 
 void RegistroGenetico::registrarBichito(int id, int idPadre, int idMadre,
                                         int generacion, bool porMitosis,
-                                        const Genoma& genoma)
+                                        const Genoma& genoma,
+                                        bool permitirFundadorAdicional)
 {
     const GenEstatico genes[] = {genoma.genEstatico1, genoma.genEstatico2};
     for (int i = 0; i < 2; ++i)
@@ -111,7 +113,8 @@ void RegistroGenetico::registrarBichito(int id, int idPadre, int idMadre,
         {
             arbol(genes[i]).registrarPortador(id, idPadre, idMadre,
                                              generacion, porMitosis,
-                                             genoma.variables());
+                                             genoma.variables(),
+                                             permitirFundadorAdicional);
         }
     }
 }

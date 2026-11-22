@@ -84,11 +84,12 @@ private:
     void encolarCondenados();
     void procesarColaEliminacion(int elementosPendientes);
     void registrarEnColaVejez(const Bichito& bichito);
-    void registrarEnArbolGenealogico(const Bichito& bichito);
+    void registrarEnArbolGenealogico(const Bichito& bichito,
+                                     bool permitirFundadorAdicional = false);
     void intentarMutarGenEstatico(Bichito& bichito);
     void procesarMuertesPorHambre();
     void procesarMuertesPorVejez();
-    void agregarBichitoAlFinal(Bichito bichito);
+    void agregarBichitoAlFinal(Bichito bichito, bool permitirFundadorAdicional = false);
     void eliminarBichitoEn(int indice, bool retirarDeCola = true);
     void eliminarBichitoPorId(int id);
     void vaciarPoblacion();
@@ -113,6 +114,8 @@ public:
     // que llama PantallaSimulacion en cada frame.
     void procesarEvento(const sf::Event& evento);
     bool cerrarArbolGenetico() { return panelGenetica.cerrarArbol(); }
+    bool arbolGeneticoAbierto() const { return panelGenetica.arbolAbierto(); }
+    bool abrirArbolGenetico(GenEstatico gen);
     void actualizar(float dt);
     void dibujar(sf::RenderTarget& destino, GestorRecursos& recursos);
 
@@ -137,7 +140,8 @@ public:
     void setBichitosIniciales(int n) { if (n >= 1 && n <= 300) bichitosIniciales = n; }
     void setDuracionEstacion(float segundos) { if (segundos > 0.0f) tiempoCambioEstacion = segundos; }
 
-    void agregarBichito();
+    void agregarBichito(GenEstatico gen = GenEstatico::NINGUNO);
+    bool tieneGenRegistrado(GenEstatico gen) const;
     void quitarBichito();
 
     // ---------- Desastres Naturales y The Reaper ----------

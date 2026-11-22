@@ -33,7 +33,8 @@ public:
     ArbolLinajeGen& operator=(const ArbolLinajeGen&) = delete;
 
     void registrarPortador(int id, int idPadre, int idMadre, int generacion,
-                           bool porMitosis, const GenesVariables& genes);
+                           bool porMitosis, const GenesVariables& genes,
+                           bool permitirFundadorAdicional = false);
     void registrarMuerte(int id);
     void limpiar();
     bool buscar(int id, NodoGenealogico*& nodo) const;
@@ -57,7 +58,8 @@ public:
     ArbolLinajeGen& arbol(GenEstatico gen);
     const ArbolLinajeGen& arbol(GenEstatico gen) const;
     void registrarBichito(int id, int idPadre, int idMadre, int generacion,
-                          bool porMitosis, const Genoma& genoma);
+                          bool porMitosis, const Genoma& genoma,
+                          bool permitirFundadorAdicional = false);
     bool puedeMutar(GenEstatico gen) const;
     void registrarMuerte(int id);
     void limpiar();

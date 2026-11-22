@@ -51,7 +51,7 @@ namespace
     }
 
     constexpr int POBLACION_INICIAL_GENERAL = 10;
-    constexpr float ANIOS_POR_SEGUNDO = 2.5f; // 90 años de vida base -> 36s de simulación
+    constexpr float ANIOS_POR_SEGUNDO = 1.0f; // Un año de edad por segundo de simulación
     constexpr float PROBABILIDAD_MUTACION_GEN_ESTATICO = 0.05f;
     constexpr std::array<GenEstatico, 6> GENES_ESTATICOS = {
         GenEstatico::INMUNIDAD,
@@ -133,6 +133,17 @@ void MotorGrafico::setPrioridadComida(int p)
     if (p >= 1 && p <= 3) prioridadComida = p;
 }
 
+bool MotorGrafico::tieneGenRegistrado(GenEstatico gen) const
+{
+    return gen != GenEstatico::NINGUNO &&
+           registroGenetico.arbol(gen).cantidadPortadores() > 0;
+}
+
+bool MotorGrafico::abrirArbolGenetico(GenEstatico gen)
+{
+    return panelGenetica.abrirArbol(gen, registroGenetico);
+}
+
 void MotorGrafico::agregarComida(float x, float y, int prioridad, int puntosVida,
                                  OrigenComida origen)
 {
@@ -143,7 +154,7 @@ void MotorGrafico::agregarComida(float x, float y, int prioridad, int puntosVida
     indicesComida.insertar(c.getId(), comidasActivas.longitud() - 1);
 }
 
-void MotorGrafico::agregarBichitoAlFinal(Bichito bichito)
+void MotorGrafico::agregarBichitoAlFinal(Bichito bichito, bool permitirFundadorAdicional)
 {
     if (indicesBichitos.contiene(bichito.getId()))
     {
@@ -159,7 +170,7 @@ void MotorGrafico::agregarBichitoAlFinal(Bichito bichito)
     poblacion.generar(bichito);
     indicesBichitos.insertar(bichito.getId(), poblacion.longitud() - 1);
     registrarEnColaVejez(bichito);
-    registrarEnArbolGenealogico(bichito);
+    registrarEnArbolGenealogico(bichito, permitirFundadorAdicional);
 }
 
 void MotorGrafico::eliminarBichitoEn(int indice, bool retirarDeCola)
@@ -228,11 +239,13 @@ void MotorGrafico::registrarEnColaVejez(const Bichito& bichito)
     colaVejez.insertar(bichito.getId(), tiempoSimulacion + segundosRestantes, bichito.getEdadMaxima());
 }
 
-void MotorGrafico::registrarEnArbolGenealogico(const Bichito& bichito)
+void MotorGrafico::registrarEnArbolGenealogico(const Bichito& bichito,
+                                               bool permitirFundadorAdicional)
 {
     registroGenetico.registrarBichito(
         bichito.getId(), bichito.getIdPadre(), bichito.getIdMadre(),
-        bichito.getGeneracion(), bichito.nacioPorMitosis(), bichito.getGenetica());
+        bichito.getGeneracion(), bichito.nacioPorMitosis(), bichito.getGenetica(),
+        permitirFundadorAdicional);
 }
 
 void MotorGrafico::intentarMutarGenEstatico(Bichito& bichito)
@@ -357,7 +370,7 @@ void MotorGrafico::vaciarComidas()
     indicesComida.vaciar();
 }
 
-void MotorGrafico::agregarBichito()
+void MotorGrafico::agregarBichito(GenEstatico gen)
 {
     static int idNuevo = 1000;
     const int rangoX = std::max(1, static_cast<int>(tamanoMundo.x) - 80);
@@ -365,9 +378,11 @@ void MotorGrafico::agregarBichito()
     const float x = 40.0f + static_cast<float>(std::rand() % rangoX);
     const float y = 40.0f + static_cast<float>(std::rand() % rangoY);
 
-    // Los bichitos iniciales nacen sin genes estáticos.
-    Bichito b(idNuevo++, 40.0f, x, y, generarGenomaInicial());
-    agregarBichitoAlFinal(b);
+    const Genoma genoma = gen == GenEstatico::NINGUNO
+        ? generarGenomaInicial()
+        : Genoma(120.0f, gen);
+    Bichito b(idNuevo++, 40.0f, x, y, genoma);
+    agregarBichitoAlFinal(b, gen != GenEstatico::NINGUNO);
 }
 
 void MotorGrafico::quitarBichito()
