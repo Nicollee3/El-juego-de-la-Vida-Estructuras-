@@ -1,20 +1,38 @@
 #include "MotorDesastres.h"
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <vector>
 
+namespace
+{
+    constexpr double PROBABILIDAD_DESASTRE_POR_SEGUNDO =
+        0.00001; // Promedio: uno cada 100 000 s simulados.
+
+    double uniformeAltaPrecision()
+    {
+        const double base = static_cast<double>(RAND_MAX) + 1.0;
+        const double valor = static_cast<double>(std::rand()) * base + std::rand();
+        return valor / (base * base);
+    }
+
+    bool debeOcurrirDesastreEspontaneo(float dt)
+    {
+        if (dt <= 0.0f)
+            return false;
+
+        const double probabilidad = 1.0 -
+            std::exp(-PROBABILIDAD_DESASTRE_POR_SEGUNDO * static_cast<double>(dt));
+        return uniformeAltaPrecision() < probabilidad;
+    }
+}
+
 MotorDesastres::MotorDesastres()
     : extractorPerfil(perfilPorDefecto),
       umbralSobrepoblacion(UMBRAL_SOBREPOBLACION),
-      objetivoEquilibrio(OBJETIVO_EQUILIBRIO),
-      minIntervaloAleatorio(45.0f),
-      maxIntervaloAleatorio(80.0f),
-      temporizadorDesastre(0.0f),
-      proximoIntervalo(60.0f)
-{
-    proximoIntervalo = generarIntervaloAleatorio();
-}
+      objetivoEquilibrio(OBJETIVO_EQUILIBRIO)
+{}
 
 void MotorDesastres::setExtractorPerfil(ExtractorPerfil extractor)
 {
@@ -26,18 +44,6 @@ void MotorDesastres::setExtractorPerfil(ExtractorPerfil extractor)
     {
         extractorPerfil = perfilPorDefecto;
     }
-}
-
-void MotorDesastres::setIntervaloAleatorio(float minSegundos, float maxSegundos)
-{
-    if (minSegundos <= 0.0f)
-        minSegundos = 1.0f;
-    if (maxSegundos < minSegundos)
-        maxSegundos = minSegundos;
-
-    minIntervaloAleatorio = minSegundos;
-    maxIntervaloAleatorio = maxSegundos;
-    proximoIntervalo = generarIntervaloAleatorio();
 }
 
 void MotorDesastres::setLimitesSobrepoblacion(int umbralMaximo, int objetivo)
@@ -57,8 +63,6 @@ void MotorDesastres::reiniciar()
 {
     reaper.vaciar();
     ultimoResultado = ResultadoDesastre{};
-    temporizadorDesastre = 0.0f;
-    proximoIntervalo = generarIntervaloAleatorio();
 }
 
 PerfilReaper MotorDesastres::perfilPorDefecto(const Bichito &bichito)
@@ -132,12 +136,6 @@ TipoDesastre MotorDesastres::elegirDesastreAleatorio(int poblacionActual)
     if (r < 85)
         return TipoDesastre::BombaNuclear;
     return TipoDesastre::PatriaMilagro;
-}
-
-float MotorDesastres::generarIntervaloAleatorio() const
-{
-    const float u = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
-    return minIntervaloAleatorio + u * (maxIntervaloAleatorio - minIntervaloAleatorio);
 }
 
 void MotorDesastres::poblarColaReaper(ArregloDinamico<Bichito> &poblacion, bool priorizarMasViejos)
@@ -266,16 +264,12 @@ bool MotorDesastres::actualizar(float dt, ArregloDinamico<Bichito> &poblacion,
         return true;
     }
 
-    // 2. Temporizador para desastres naturales aleatorios (espera a que haya una colonia mínima).
+    // Evitar desastres espontáneos antes de que exista una colonia suficiente.
     if (poblacion.longitud() < POBLACION_MINIMA_DESASTRE)
         return false;
 
-    temporizadorDesastre += dt;
-    if (temporizadorDesastre >= proximoIntervalo)
+    if (debeOcurrirDesastreEspontaneo(dt))
     {
-        temporizadorDesastre = 0.0f;
-        proximoIntervalo = generarIntervaloAleatorio();
-
         const TipoDesastre elegido = elegirDesastreAleatorio(poblacion.longitud());
         ejecutarDesastre(elegido, poblacion, eliminarPorId);
         return true;
@@ -290,10 +284,4 @@ std::string MotorDesastres::getResumenUltimoDesastre() const
         return "Ninguno";
 
     return ultimoResultado.nombre + " (-" + std::to_string(ultimoResultado.bajasReales) + ")";
-}
-
-float MotorDesastres::getTiempoRestanteProximoDesastre() const
-{
-    const float restante = proximoIntervalo - temporizadorDesastre;
-    return restante > 0.0f ? restante : 0.0f;
 }

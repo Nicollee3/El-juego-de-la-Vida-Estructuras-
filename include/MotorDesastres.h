@@ -2,7 +2,8 @@
  * @file MotorDesastres.h
  * @brief Motor de Desastres Naturales y "The Reaper" (Gestor de Mortandad).
  * @details Define el catálogo de desastres, la lógica de filtrado con ColaPrioridad
- *          y la activación aleatoria / por sobrepoblación de forma desacoplada de
+ *          y la activación manual, aleatoria poco frecuente o por sobrepoblación
+ *          de forma desacoplada de
  *          los atributos genéticos de la Parte 1.
  */
 
@@ -46,7 +47,7 @@ struct ResultadoDesastre
 /*
  * @class MotorDesastres
  * @brief Gestiona el catálogo de desastres, la cola de prioridad de The Reaper
- *        y el disparo aleatorio o por sobrepoblación.
+ *        y el disparo aleatorio poco frecuente o por sobrepoblación.
  */
 class MotorDesastres
 {
@@ -60,7 +61,7 @@ public:
     static constexpr int BAJAS_BOMBA_NUCLEAR = 100;
     static constexpr int BAJAS_PATRIA_MILAGRO = 60;
 
-    // Control de sobrepoblación y balance de desastres aleatorios
+    // Control de sobrepoblación y desastres aleatorios poco frecuentes
     static constexpr int UMBRAL_SOBREPOBLACION = 160;
     static constexpr int OBJETIVO_EQUILIBRIO = 140;
     static constexpr int POBLACION_MINIMA_DESASTRE = 15;
@@ -75,22 +76,17 @@ public:
     void setExtractorPerfil(ExtractorPerfil extractor);
 
     /*
-     * @brief Configura el rango de segundos (en tiempo de simulación) entre desastres aleatorios.
-     */
-    void setIntervaloAleatorio(float minSegundos, float maxSegundos);
-
-    /*
      * @brief Configura el umbral de sobrepoblación y la población objetivo tras equilibrar.
      */
     void setLimitesSobrepoblacion(int umbralMaximo, int objetivoEquilibrio);
 
     /*
-     * @brief Reinicia temporizadores y el registro del último desastre.
+     * @brief Reinicia el registro del último desastre.
      */
     void reiniciar();
 
     /*
-     * @brief Avanza el temporizador aleatorio y verifica sobrepoblación en cada frame.
+     * @brief Verifica la sobrepoblación y una probabilidad muy baja de desastre espontáneo.
      * @return true si ocurrió un desastre en este paso.
      */
     bool actualizar(float dt, ArregloDinamico<Bichito> &poblacion,
@@ -127,7 +123,6 @@ public:
 
     const ResultadoDesastre &getUltimoResultado() const { return ultimoResultado; }
     std::string getResumenUltimoDesastre() const;
-    float getTiempoRestanteProximoDesastre() const;
 
 private:
     ColaPrioridad reaper;
@@ -137,12 +132,6 @@ private:
     int umbralSobrepoblacion;
     int objetivoEquilibrio;
 
-    float minIntervaloAleatorio;
-    float maxIntervaloAleatorio;
-    float temporizadorDesastre;
-    float proximoIntervalo;
-
-    float generarIntervaloAleatorio() const;
     void poblarColaReaper(ArregloDinamico<Bichito> &poblacion, bool priorizarMasViejos);
 };
 

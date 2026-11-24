@@ -322,13 +322,13 @@ void Bichito::moverHaciaObjetivo(float dt)
     const float distancia = std::sqrt(dx * dx + dy * dy);
     if (tieneGen(GenEstatico::TELETRANSPORTARSE) &&
         cooldownTeletransporte <= 0.0f && distancia > 180.0f &&
-        estado != EstadoBichito::DePaseo && std::rand() % 180 == 0)
+        estado != EstadoBichito::DePaseo)
     {
         const float paso = std::min(150.0f, distancia - 25.0f);
         x += dx / distancia * paso;
         y += dy / distancia * paso;
         cambiarVida(-8.0f);
-        cooldownTeletransporte = 3.0f;
+        cooldownTeletransporte = 5.0f;
         destelloTeletransporte = 0.18f;
         return;
     }
