@@ -84,12 +84,12 @@ int MotorDesastres::impactoDe(TipoDesastre tipo)
     {
     case TipoDesastre::Meteoritos:
         return BAJAS_METEORITOS;
-    case TipoDesastre::Diluvio:
-        return BAJAS_DILUVIO;
-    case TipoDesastre::BombaNuclear:
-        return BAJAS_BOMBA_NUCLEAR;
-    case TipoDesastre::PatriaMilagro:
-        return BAJAS_PATRIA_MILAGRO;
+    case TipoDesastre::LluviaAcida:
+        return BAJAS_LLUVIA_ACIDA;
+    case TipoDesastre::TormentaSolar:
+        return BAJAS_TORMENTA_SOLAR;
+    case TipoDesastre::ErupcionVolcanica:
+        return BAJAS_ERUPCION_VOLCANICA;
     case TipoDesastre::Sobrepoblacion:
     case TipoDesastre::Ninguno:
     default:
@@ -105,12 +105,12 @@ std::string MotorDesastres::nombreDe(TipoDesastre tipo)
         return "Sobrepoblacion";
     case TipoDesastre::Meteoritos:
         return "Meteoritos";
-    case TipoDesastre::Diluvio:
-        return "Diluvio";
-    case TipoDesastre::BombaNuclear:
-        return "Bomba Nuclear";
-    case TipoDesastre::PatriaMilagro:
-        return "Patria Milagro";
+    case TipoDesastre::LluviaAcida:
+        return "Lluvia Acida";
+    case TipoDesastre::TormentaSolar:
+        return "Tormenta Solar";
+    case TipoDesastre::ErupcionVolcanica:
+        return "Erupcion Volcanica";
     case TipoDesastre::Ninguno:
     default:
         return "Ninguno";
@@ -124,18 +124,18 @@ TipoDesastre MotorDesastres::elegirDesastreAleatorio(int poblacionActual)
     // Si la colonia aún es pequeña (< 80), evitar extinguirla con los eventos masivos.
     if (poblacionActual < POBLACION_DESASTRES_MAYORES)
     {
-        return (r < 55) ? TipoDesastre::Meteoritos : TipoDesastre::Diluvio;
+        return (r < 55) ? TipoDesastre::Meteoritos : TipoDesastre::LluviaAcida;
     }
 
-    // Selección aleatoria ponderada entre los 4 desastres catastróficos:
-    // Meteoritos (35%), Diluvio (30%), Bomba Nuclear (20%), Patria Milagro (15%).
+    // Selección aleatoria ponderada entre los 4 desastres planetarios:
+    // Meteoritos (35%), Lluvia Ácida (30%), Tormenta Solar (20%), Erupción Volcánica (15%).
     if (r < 35)
         return TipoDesastre::Meteoritos;
     if (r < 65)
-        return TipoDesastre::Diluvio;
+        return TipoDesastre::LluviaAcida;
     if (r < 85)
-        return TipoDesastre::BombaNuclear;
-    return TipoDesastre::PatriaMilagro;
+        return TipoDesastre::TormentaSolar;
+    return TipoDesastre::ErupcionVolcanica;
 }
 
 void MotorDesastres::poblarColaReaper(ArregloDinamico<Bichito> &poblacion, bool priorizarMasViejos)

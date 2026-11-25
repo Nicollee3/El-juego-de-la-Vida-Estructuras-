@@ -71,10 +71,10 @@ namespace
     {
         switch (tipo)
         {
-        case TipoDesastre::Meteoritos:     return sf::Color(255, 115, 35);  // naranja fuego
-        case TipoDesastre::Diluvio:        return sf::Color(70, 175, 255);  // azul tormenta
-        case TipoDesastre::BombaNuclear:   return sf::Color(245, 225, 45);  // amarillo radiactivo
-        case TipoDesastre::PatriaMilagro:  return sf::Color(255, 205, 30);  // dorado Colombia
+        case TipoDesastre::Meteoritos:        return sf::Color(255, 115, 35); // naranja fuego
+        case TipoDesastre::LluviaAcida:       return sf::Color(125, 245, 75); // verde ácido
+        case TipoDesastre::TormentaSolar:     return sf::Color(255, 225, 65); // dorado solar
+        case TipoDesastre::ErupcionVolcanica: return sf::Color(255, 78, 35);  // lava volcánica
         case TipoDesastre::Sobrepoblacion: return sf::Color(225, 50, 70);   // rojo parca
         case TipoDesastre::Ninguno:
         default:                           return sf::Color::White;
@@ -85,10 +85,10 @@ namespace
     {
         switch (tipo)
         {
-        case TipoDesastre::Meteoritos:     return "LLUVIA DE METEORITOS";
-        case TipoDesastre::Diluvio:        return "GRAN DILUVIO";
-        case TipoDesastre::BombaNuclear:   return "BOMBA NUCLEAR";
-        case TipoDesastre::PatriaMilagro:  return "PATRIA MILAGRO";
+        case TipoDesastre::Meteoritos:        return "LLUVIA DE METEORITOS";
+        case TipoDesastre::LluviaAcida:       return "LLUVIA ÁCIDA";
+        case TipoDesastre::TormentaSolar:     return "TORMENTA SOLAR";
+        case TipoDesastre::ErupcionVolcanica: return "ERUPCIÓN VOLCÁNICA";
         case TipoDesastre::Sobrepoblacion: return "SOBREPOBLACIÓN";
         case TipoDesastre::Ninguno:
         default:                           return "";
@@ -910,14 +910,14 @@ void MotorGrafico::dibujarAlertaDesastre(sf::RenderTarget& destino, GestorRecurs
     case TipoDesastre::Meteoritos:
         bajasStr = "LOS METEORITOS HAN ELIMINADO " + nStr + " BICHITOS";
         break;
-    case TipoDesastre::Diluvio:
-        bajasStr = "EL DILUVIO HA ELIMINADO " + nStr + " BICHITOS";
+    case TipoDesastre::LluviaAcida:
+        bajasStr = "LA LLUVIA ÁCIDA HA ELIMINADO " + nStr + " BICHITOS";
         break;
-    case TipoDesastre::BombaNuclear:
-        bajasStr = "LA BOMBA NUCLEAR HA ELIMINADO " + nStr + " BICHITOS";
+    case TipoDesastre::TormentaSolar:
+        bajasStr = "LA TORMENTA SOLAR HA ELIMINADO " + nStr + " BICHITOS";
         break;
-    case TipoDesastre::PatriaMilagro:
-        bajasStr = "ABELARDO ELIMINÓ A " + nStr + " GUERRILLEROS (BICHITOS)";
+    case TipoDesastre::ErupcionVolcanica:
+        bajasStr = "LA ERUPCIÓN VOLCÁNICA HA ELIMINADO " + nStr + " BICHITOS";
         break;
     case TipoDesastre::Sobrepoblacion:
     default:
@@ -984,126 +984,260 @@ void MotorGrafico::actualizarEfectosClima(float dt)
 
 void MotorGrafico::dibujarEfectosEstacion(sf::RenderTarget& destino, const std::string& estacion) const
 {
+    // Helper de pixel art: dibuja una matriz de caracteres alineada a la grilla de píxeles
+    // en un único VertexArray (cero rotación suave, cero círculos vectoriales).
+    auto agregarQuadPixel = [](sf::VertexArray& va, float x, float y, float tam, sf::Color c)
+    {
+        va.append(sf::Vertex(sf::Vector2f(x, y), c));
+        va.append(sf::Vertex(sf::Vector2f(x + tam, y), c));
+        va.append(sf::Vertex(sf::Vector2f(x + tam, y + tam), c));
+        va.append(sf::Vertex(sf::Vector2f(x, y + tam), c));
+    };
+
+    auto snap = [](float v, float paso) -> float
+    {
+        return std::floor(v / paso) * paso;
+    };
+
+    auto dibujarMatriz = [&](sf::VertexArray& va, float cx, float cy, float px,
+                             const char* const* filas, int nFilas, int nCols,
+                             sf::Color c1, sf::Color c2, sf::Color c3)
+    {
+        const float origenX = snap(cx - (nCols * px) * 0.5f, px);
+        const float origenY = snap(cy - (nFilas * px) * 0.5f, px);
+        for (int r = 0; r < nFilas; ++r)
+        {
+            for (int col = 0; col < nCols; ++col)
+            {
+                const char ch = filas[r][col];
+                if (ch == '.' || ch == ' ')
+                    continue;
+                sf::Color color = c1;
+                if (ch == '2') color = c2;
+                else if (ch == '3') color = c3;
+                agregarQuadPixel(va, origenX + col * px, origenY + r * px, px, color);
+            }
+        }
+    };
+
+    sf::VertexArray quads(sf::Quads);
+
     if (estacion == "invierno")
     {
+        // Copos de nieve pixel art (3 tamaños/patrones para dar profundidad)
+        static const char* const COPO_GRANDE[5] = {
+            "..2..",
+            ".212.",
+            "21312",
+            ".212.",
+            "..2.."
+        };
+        static const char* const COPO_MEDIO[3] = {
+            ".2.",
+            "212",
+            ".2."
+        };
+        static const char* const COPO_CHICO[2] = {
+            "11",
+            "11"
+        };
+
         for (const auto& p : particulasClima)
         {
-            const sf::Color colorCopo = (p.variante == 0)
-                                            ? sf::Color(200, 235, 255, 210)
-                                            : sf::Color(245, 250, 255, 220);
-            const float largo = p.tam * 1.7f;
-            const float grosor = std::max(1.5f, p.tam * 0.32f);
+            const float px = (p.variante == 0) ? 4.0f : 3.0f;
+            const sf::Color blanco(245, 252, 255, 230);
+            const sf::Color celeste(175, 225, 255, 215);
+            const sf::Color brillo(255, 255, 255, 255);
 
-            sf::RectangleShape barra1(sf::Vector2f(largo, grosor));
-            barra1.setOrigin(largo / 2.0f, grosor / 2.0f);
-            barra1.setPosition(p.x, p.y);
-            barra1.setRotation(p.rotacion);
-            barra1.setFillColor(colorCopo);
-            destino.draw(barra1);
-
-            sf::RectangleShape barra2(sf::Vector2f(largo, grosor));
-            barra2.setOrigin(largo / 2.0f, grosor / 2.0f);
-            barra2.setPosition(p.x, p.y);
-            barra2.setRotation(p.rotacion + 60.0f);
-            barra2.setFillColor(colorCopo);
-            destino.draw(barra2);
-
-            sf::RectangleShape barra3(sf::Vector2f(largo, grosor));
-            barra3.setOrigin(largo / 2.0f, grosor / 2.0f);
-            barra3.setPosition(p.x, p.y);
-            barra3.setRotation(p.rotacion + 120.0f);
-            barra3.setFillColor(colorCopo);
-            destino.draw(barra3);
+            if (p.variante == 0)
+                dibujarMatriz(quads, p.x, p.y, px, COPO_GRANDE, 5, 5, blanco, celeste, brillo);
+            else if (p.variante == 1 || p.variante == 2)
+                dibujarMatriz(quads, p.x, p.y, px, COPO_MEDIO, 3, 3, blanco, celeste, brillo);
+            else
+                dibujarMatriz(quads, p.x, p.y, px, COPO_CHICO, 2, 2, blanco, celeste, brillo);
         }
+        destino.draw(quads);
         return;
     }
 
     if (estacion == "otono")
     {
-        const sf::Color paletaOtono[4] = {
-            sf::Color(235, 125, 35, 215),
-            sf::Color(210, 75, 35, 215),
-            sf::Color(240, 185, 45, 215),
-            sf::Color(175, 90, 40, 210)
+        // Hojas otoñales pixel art con 2 frames de balanceo (izq / der) y tallito oscuro
+        static const char* const HOJA_IZQ[5] = {
+            "...3.",
+            "..21.",
+            ".211.",
+            ".112.",
+            "..2.."
         };
+        static const char* const HOJA_DER[5] = {
+            ".3...",
+            ".12..",
+            ".112.",
+            ".211.",
+            "..2.."
+        };
+
+        const sf::Color principales[4] = {
+            sf::Color(238, 128, 36, 230),
+            sf::Color(214, 72, 38, 230),
+            sf::Color(242, 188, 46, 230),
+            sf::Color(196, 98, 38, 225)
+        };
+        const sf::Color sombras[4] = {
+            sf::Color(186, 84, 22, 230),
+            sf::Color(156, 42, 24, 230),
+            sf::Color(194, 134, 26, 230),
+            sf::Color(140, 62, 24, 225)
+        };
+        const sf::Color tallo(92, 52, 28, 235);
+
         for (const auto& p : particulasClima)
         {
-            sf::CircleShape hoja(p.tam * 0.95f, 4);
-            hoja.setOrigin(hoja.getRadius(), hoja.getRadius());
-            hoja.setScale(1.45f, 0.72f);
-            hoja.setPosition(p.x, p.y);
-            hoja.setRotation(p.rotacion);
-            hoja.setFillColor(paletaOtono[p.variante]);
-            destino.draw(hoja);
+            const float px = (p.variante % 2 == 0) ? 4.0f : 3.0f;
+            const bool frameDer = std::sin(tiempoVisual * 2.6f + p.fase) >= 0.0f;
+            dibujarMatriz(quads, p.x, p.y, px, frameDer ? HOJA_DER : HOJA_IZQ, 5, 5,
+                          principales[p.variante], sombras[p.variante], tallo);
         }
+        destino.draw(quads);
         return;
     }
 
     if (estacion == "primavera")
     {
-        const sf::Color paletaPrimavera[4] = {
-            sf::Color(255, 175, 205, 210),
-            sf::Color(255, 210, 225, 205),
-            sf::Color(255, 245, 250, 200),
-            sf::Color(235, 170, 245, 195)
+        // Pétalos de sakura / flores pixel art en 2 frames de caída suave
+        static const char* const PETALO_A[4] = {
+            ".11.",
+            "1121",
+            ".21.",
+            "...."
         };
+        static const char* const PETALO_B[4] = {
+            "..1.",
+            ".112",
+            "121.",
+            ".1.."
+        };
+
+        const sf::Color principales[4] = {
+            sf::Color(255, 175, 208, 225),
+            sf::Color(255, 212, 228, 220),
+            sf::Color(255, 244, 250, 215),
+            sf::Color(232, 172, 248, 215)
+        };
+        const sf::Color sombras[4] = {
+            sf::Color(232, 122, 168, 225),
+            sf::Color(240, 162, 192, 220),
+            sf::Color(235, 208, 224, 215),
+            sf::Color(196, 128, 222, 215)
+        };
+
         for (const auto& p : particulasClima)
         {
-            sf::CircleShape petalo(p.tam * 0.85f, 8);
-            petalo.setOrigin(petalo.getRadius(), petalo.getRadius());
-            petalo.setScale(1.35f, 0.7f);
-            petalo.setPosition(p.x, p.y);
-            petalo.setRotation(p.rotacion);
-            petalo.setFillColor(paletaPrimavera[p.variante]);
-            destino.draw(petalo);
+            const float px = (p.variante == 0) ? 4.0f : 3.0f;
+            const bool frameB = std::sin(tiempoVisual * 2.8f + p.fase) >= 0.0f;
+            dibujarMatriz(quads, p.x, p.y, px, frameB ? PETALO_B : PETALO_A, 4, 4,
+                          principales[p.variante], sombras[p.variante], sombras[p.variante]);
         }
+        destino.draw(quads);
         return;
     }
 
     if (estacion == "verano")
     {
-        const sf::Vector2f posSol(tamanoMundo.x - 86.0f, 82.0f);
-        const float pulso = 1.0f + 0.07f * std::sin(tiempoVisual * 2.5f);
+        // 1) Sol 100% pixel art en la esquina superior derecha con 2 frames de rayos
+        static const char* const SOL_A[15] = {
+            ".......2.......",
+            ".......2.......",
+            "..2...222...2..",
+            "...2.11111.2...",
+            "....1133311....",
+            "...113333311...",
+            "..21333333312..",
+            "222133333331222",
+            "..21333333312..",
+            "...113333311...",
+            "....1133311....",
+            "...2.11111.2...",
+            "..2...222...2..",
+            ".......2.......",
+            ".......2......."
+        };
+        static const char* const SOL_B[15] = {
+            "...............",
+            ".2.....2.....2.",
+            "..2...222...2..",
+            "...2.11111.2...",
+            "....1133311....",
+            "...113333311...",
+            "..21333333312..",
+            ".2213333333122.",
+            "..21333333312..",
+            "...113333311...",
+            "....1133311....",
+            "...2.11111.2...",
+            "..2...222...2..",
+            ".2.....2.....2.",
+            "..............."
+        };
 
-        sf::CircleShape haloExt(74.0f * pulso);
-        haloExt.setOrigin(haloExt.getRadius(), haloExt.getRadius());
-        haloExt.setPosition(posSol);
-        haloExt.setFillColor(sf::Color(255, 215, 70, 28));
-        destino.draw(haloExt);
+        const float solX = tamanoMundo.x - 84.0f;
+        const float solY = 80.0f;
+        const bool frameSolB = (static_cast<int>(tiempoVisual * 2.2f) % 2) == 1;
 
-        sf::CircleShape haloMed(52.0f * pulso);
-        haloMed.setOrigin(haloMed.getRadius(), haloMed.getRadius());
-        haloMed.setPosition(posSol);
-        haloMed.setFillColor(sf::Color(255, 225, 85, 55));
-        destino.draw(haloMed);
+        // Halo pixelado sutil detrás del sol
+        const float pxHalo = 8.0f;
+        static const char* const HALO_SOL[9] = {
+            "..11111..",
+            ".1111111.",
+            "111111111",
+            "111111111",
+            "111111111",
+            "111111111",
+            "111111111",
+            ".1111111.",
+            "..11111.."
+        };
+        const sf::Uint8 alphaHalo = frameSolB ? 36 : 24;
+        dibujarMatriz(quads, solX, solY, pxHalo, HALO_SOL, 9, 9,
+                      sf::Color(255, 220, 80, alphaHalo),
+                      sf::Color(255, 220, 80, alphaHalo),
+                      sf::Color(255, 220, 80, alphaHalo));
 
-        for (int i = 0; i < 12; ++i)
-        {
-            const float ang = tiempoVisual * 20.0f + static_cast<float>(i) * 30.0f;
-            sf::RectangleShape rayo(sf::Vector2f(22.0f, 5.0f));
-            rayo.setOrigin(-38.0f, 2.5f);
-            rayo.setPosition(posSol);
-            rayo.setRotation(ang);
-            rayo.setFillColor(sf::Color(255, 230, 95, 190));
-            destino.draw(rayo);
-        }
+        dibujarMatriz(quads, solX, solY, 6.0f, frameSolB ? SOL_B : SOL_A, 15, 15,
+                      sf::Color(255, 208, 60, 235),  // borde dorado
+                      sf::Color(255, 178, 45, 210),  // rayos cálidos
+                      sf::Color(255, 245, 145, 245)); // centro brillante
 
-        sf::CircleShape disco(32.0f);
-        disco.setOrigin(32.0f, 32.0f);
-        disco.setPosition(posSol);
-        disco.setFillColor(sf::Color(255, 232, 95, 235));
-        destino.draw(disco);
-
+        // 2) Partículas doradas de verano (mismo estilo flotante subiendo, en pixel art)
+        static const char* const MOTA_CRUZ[3] = {
+            ".2.",
+            "212",
+            ".2."
+        };
         for (int i = 0; i < static_cast<int>(particulasClima.size()); i += 2)
         {
             const auto& p = particulasClima[static_cast<std::size_t>(i)];
             const float brillo = 0.5f + 0.5f * std::sin(tiempoVisual * 3.0f + p.fase);
-            sf::CircleShape mota(p.tam * 0.55f);
-            mota.setOrigin(mota.getRadius(), mota.getRadius());
-            mota.setPosition(p.x, tamanoMundo.y - p.y);
-            mota.setFillColor(sf::Color(255, 238, 130, static_cast<sf::Uint8>(135.0f * brillo)));
-            destino.draw(mota);
+            const sf::Uint8 aCentro = static_cast<sf::Uint8>(165.0f * brillo);
+            const sf::Uint8 aBorde = static_cast<sf::Uint8>(85.0f * brillo);
+            const float my = tamanoMundo.y - p.y;
+
+            if (brillo > 0.72f)
+            {
+                dibujarMatriz(quads, p.x, my, 4.0f, MOTA_CRUZ, 3, 3,
+                              sf::Color(255, 248, 175, aCentro),
+                              sf::Color(255, 225, 95, aBorde),
+                              sf::Color(255, 255, 210, aCentro));
+            }
+            else
+            {
+                const float px = 4.0f;
+                agregarQuadPixel(quads, snap(p.x, px), snap(my, px), px,
+                                 sf::Color(255, 238, 130, aCentro));
+            }
         }
+        destino.draw(quads);
     }
 }
 
@@ -1113,70 +1247,233 @@ void MotorGrafico::dibujarAnimacionDesastre(sf::RenderTarget& destino) const
         return;
 
     const float t = duracionAlertaDesastre - tiempoAlertaDesastre;
-    const float progreso = std::min(1.0f, std::max(0.0f, t / duracionAlertaDesastre));
     const float fade = (tiempoAlertaDesastre < 1.0f) ? std::max(0.0f, tiempoAlertaDesastre) : 1.0f;
 
-    if (alertaDesastre.tipo == TipoDesastre::Diluvio)
+    auto snap = [](float v, float paso) -> float
     {
-        sf::RectangleShape velo(tamanoMundo);
-        velo.setFillColor(sf::Color(15, 45, 95, static_cast<sf::Uint8>(95.0f * fade)));
-        destino.draw(velo);
+        return std::floor(v / paso) * paso;
+    };
 
-        if ((t > 0.15f && t < 0.28f) || (t > 1.35f && t < 1.46f))
+    auto agregarQuad = [&](sf::VertexArray& va, float x, float y, float w, float h, sf::Color c)
+    {
+        if (x + w <= 0.0f || x >= tamanoMundo.x || y + h <= 0.0f || y >= tamanoMundo.y)
+            return;
+        const float x0 = std::max(0.0f, x);
+        const float y0 = std::max(0.0f, y);
+        const float x1 = std::min(tamanoMundo.x, x + w);
+        const float y1 = std::min(tamanoMundo.y, y + h);
+        va.append(sf::Vertex(sf::Vector2f(x0, y0), c));
+        va.append(sf::Vertex(sf::Vector2f(x1, y0), c));
+        va.append(sf::Vertex(sf::Vector2f(x1, y1), c));
+        va.append(sf::Vertex(sf::Vector2f(x0, y1), c));
+    };
+
+    auto dibujarMatriz = [&](sf::VertexArray& va, float cx, float cy, float px,
+                             const char* const* filas, int nFilas, int nCols,
+                             const sf::Color* paleta)
+    {
+        const float origenX = snap(cx - (nCols * px) * 0.5f, px);
+        const float origenY = snap(cy - (nFilas * px) * 0.5f, px);
+        for (int r = 0; r < nFilas; ++r)
         {
-            sf::RectangleShape rayoFlash(tamanoMundo);
-            rayoFlash.setFillColor(sf::Color(210, 235, 255, 130));
-            destino.draw(rayoFlash);
+            for (int col = 0; col < nCols; ++col)
+            {
+                const char ch = filas[r][col];
+                if (ch < '1' || ch > '6')
+                    continue;
+                agregarQuad(va, origenX + col * px, origenY + r * px, px, px, paleta[ch - '1']);
+            }
+        }
+    };
+
+    auto dibujarAnilloPixel = [&](sf::VertexArray& va, float cx, float cy, float radio,
+                                  float px, sf::Color cBorde, sf::Color cBrillo)
+    {
+        const int rCeldas = static_cast<int>(radio / px);
+        if (rCeldas <= 0)
+            return;
+        const float baseX = snap(cx, px);
+        const float baseY = snap(cy, px);
+        const int pasos = std::max(16, rCeldas * 6);
+        for (int i = 0; i < pasos; ++i)
+        {
+            const float ang = (6.283185f * static_cast<float>(i)) / static_cast<float>(pasos);
+            const float rx = baseX + std::round(std::cos(ang) * rCeldas) * px;
+            const float ry = baseY + std::round(std::sin(ang) * rCeldas) * px;
+            agregarQuad(va, rx, ry, px, px, (i % 3 == 0) ? cBrillo : cBorde);
+        }
+    };
+
+    sf::VertexArray quads(sf::Quads);
+
+    if (alertaDesastre.tipo == TipoDesastre::LluviaAcida)
+    {
+        // 1. Velo verde tóxico atmosférico
+        agregarQuad(quads, 0.0f, 0.0f, tamanoMundo.x, tamanoMundo.y,
+                    sf::Color(16, 52, 22, static_cast<sf::Uint8>(105.0f * fade)));
+
+        // 2. Descargas eléctricas ácidas pixel art en zigzag
+        const bool rayo1 = (t > 0.15f && t < 0.30f);
+        const bool rayo2 = (t > 1.35f && t < 1.50f);
+        if (rayo1 || rayo2)
+        {
+            agregarQuad(quads, 0.0f, 0.0f, tamanoMundo.x, tamanoMundo.y, sf::Color(185, 255, 130, 95));
+            const float rxBase = rayo1 ? 260.0f : 740.0f;
+            const float pxRayo = 8.0f;
+            float rx = snap(rxBase, pxRayo);
+            for (int seg = 0; seg < 45; ++seg)
+            {
+                const float ry = static_cast<float>(seg) * pxRayo * 1.5f;
+                if (seg % 6 == 2 || seg % 6 == 3) rx += pxRayo;
+                else if (seg % 6 == 5) rx -= pxRayo * 2.0f;
+                agregarQuad(quads, rx - pxRayo, ry, pxRayo * 3.0f, pxRayo * 1.5f, sf::Color(110, 245, 75, 165));
+                agregarQuad(quads, rx, ry, pxRayo, pxRayo * 1.5f, sf::Color(235, 255, 185, 245));
+            }
         }
 
-        sf::VertexArray gotas(sf::Lines);
-        for (int i = 0; i < 140; ++i)
+        // 3. Gotas de lluvia ácida verde neón / lima en escaleritas pixel art 4x4
+        const float px = 4.0f;
+        const sf::Color cAcido(110, 245, 65, static_cast<sf::Uint8>(225.0f * fade));
+        const sf::Color cLima(215, 255, 115, static_cast<sf::Uint8>(240.0f * fade));
+
+        for (int i = 0; i < 130; ++i)
         {
             const float seedX = static_cast<float>((i * 73) % static_cast<int>(tamanoMundo.x));
             const float seedY = static_cast<float>((i * 137) % static_cast<int>(tamanoMundo.y));
-            const float gx = std::fmod(seedX + t * 240.0f, tamanoMundo.x);
-            const float gy = std::fmod(seedY + t * 760.0f, tamanoMundo.y);
-            const sf::Color cGota(140, 210, 255, static_cast<sf::Uint8>(215.0f * fade));
-            gotas.append(sf::Vertex(sf::Vector2f(gx, gy), cGota));
-            gotas.append(sf::Vertex(sf::Vector2f(std::min(tamanoMundo.x, gx + 8.0f),
-                                                 std::min(tamanoMundo.y, gy + 24.0f)), cGota));
+            const float gx = snap(std::fmod(seedX + t * 210.0f, tamanoMundo.x), px);
+            const float gy = snap(std::fmod(seedY + t * 700.0f, tamanoMundo.y), px);
+
+            agregarQuad(quads, gx, gy, px, px * 2.0f, cAcido);
+            agregarQuad(quads, gx + px, gy + px * 2.0f, px, px * 2.0f, cAcido);
+            agregarQuad(quads, gx + px * 2.0f, gy + px * 4.0f, px, px * 2.0f, cLima);
         }
-        destino.draw(gotas);
+
+        // 4. Burbujas / salpicaduras ácidas pixel art en la superficie
+        for (int i = 0; i < 18; ++i)
+        {
+            const float bx = snap(static_cast<float>((i * 157 + 40) % static_cast<int>(tamanoMundo.x - 40)), 4.0f);
+            const float by = snap(static_cast<float>((i * 211 + 80) % static_cast<int>(tamanoMundo.y - 40)), 4.0f);
+            const float pulso = std::fmod(t * 2.4f + static_cast<float>(i) * 0.37f, 1.0f);
+            const sf::Uint8 aB = static_cast<sf::Uint8>((1.0f - pulso) * 210.0f * fade);
+            if (pulso < 0.5f)
+            {
+                agregarQuad(quads, bx, by, 8.0f, 8.0f, sf::Color(150, 255, 85, aB));
+            }
+            else
+            {
+                agregarQuad(quads, bx - 4.0f, by, 4.0f, 4.0f, sf::Color(185, 255, 110, aB));
+                agregarQuad(quads, bx + 8.0f, by, 4.0f, 4.0f, sf::Color(185, 255, 110, aB));
+                agregarQuad(quads, bx + 2.0f, by - 4.0f, 4.0f, 4.0f, sf::Color(225, 255, 150, aB));
+            }
+        }
+        destino.draw(quads);
         return;
     }
 
-    if (alertaDesastre.tipo == TipoDesastre::BombaNuclear)
+    if (alertaDesastre.tipo == TipoDesastre::TormentaSolar)
     {
         const float cx = tamanoMundo.x / 2.0f;
         const float cy = tamanoMundo.y / 2.0f;
 
+        // 1. Estallido blanco-dorado cegador de la llamarada solar
         if (t < 1.35f)
         {
             const float intensidad = 1.0f - (t / 1.35f);
             const float curva = intensidad * intensidad;
-            sf::RectangleShape flashBlanco(tamanoMundo);
-            flashBlanco.setFillColor(sf::Color(255, 255, 255,
-                                               static_cast<sf::Uint8>(255.0f * curva)));
-            destino.draw(flashBlanco);
+            agregarQuad(quads, 0.0f, 0.0f, tamanoMundo.x, tamanoMundo.y,
+                        sf::Color(255, 250, 225, static_cast<sf::Uint8>(255.0f * curva)));
         }
 
-        const float radioOnda = 30.0f + t * 420.0f;
-        if (radioOnda < 850.0f)
+        // 2. Cortina de plasma / llamaradas solares pixel art bajando desde el cielo
+        const float colPx = 16.0f;
+        const int cols = static_cast<int>(std::ceil(tamanoMundo.x / colPx));
+        for (int i = 0; i < cols; ++i)
         {
-            const float alphaOnda = std::max(0.0f, 1.0f - (radioOnda / 850.0f));
-            sf::CircleShape onda(radioOnda, 48);
-            onda.setOrigin(radioOnda, radioOnda);
-            onda.setPosition(cx, cy);
-            onda.setFillColor(sf::Color(255, 240, 140, static_cast<sf::Uint8>(45.0f * alphaOnda)));
-            onda.setOutlineThickness(10.0f);
-            onda.setOutlineColor(sf::Color(255, 255, 230, static_cast<sf::Uint8>(230.0f * alphaOnda)));
-            destino.draw(onda);
+            const float x = static_cast<float>(i) * colPx;
+            const float altura = snap(64.0f + std::sin(t * 7.0f + static_cast<float>(i) * 0.55f) * 44.0f +
+                                      std::cos(t * 4.0f + static_cast<float>(i) * 0.9f) * 24.0f, 8.0f);
+            agregarQuad(quads, x, 0.0f, colPx, altura,
+                        sf::Color(255, 155, 30, static_cast<sf::Uint8>(115.0f * fade)));
+            agregarQuad(quads, x, 0.0f, colPx, std::max(8.0f, altura * 0.5f),
+                        sf::Color(255, 235, 110, static_cast<sf::Uint8>(145.0f * fade)));
         }
+
+        // 3. Estrella / llamarada solar pixel art arriba del banner
+        if (t > 0.2f)
+        {
+            static const char* const ESTRELLA_A[11] = {
+                ".....4.....",
+                ".....3.....",
+                "..3..2..3..",
+                "...21112...",
+                "..2134312..",
+                "43214441234",
+                "..2134312..",
+                "...21112...",
+                "..3..2..3..",
+                ".....3.....",
+                ".....4....."
+            };
+            static const char* const ESTRELLA_B[11] = {
+                ".....3.....",
+                ".4...2...4.",
+                "..3.222.3..",
+                "...21312...",
+                "..2134312..",
+                ".321444123.",
+                "..2134312..",
+                "...21312...",
+                "..3.222.3..",
+                ".4...2...4.",
+                ".....3....."
+            };
+            const sf::Uint8 aS = static_cast<sf::Uint8>(240.0f * fade);
+            const sf::Color palSolar[4] = {
+                sf::Color(255, 145, 35, aS),  // 1 naranja plasma
+                sf::Color(255, 205, 55, aS),  // 2 dorado solar
+                sf::Color(255, 242, 130, aS), // 3 amarillo intenso
+                sf::Color(255, 255, 240, aS)  // 4 núcleo blanco
+            };
+            const bool frameB = (static_cast<int>(t * 6.0f) % 2) == 1;
+            dibujarMatriz(quads, cx, 146.0f, 8.0f, frameB ? ESTRELLA_B : ESTRELLA_A, 11, 11, palSolar);
+        }
+
+        // 4. Doble onda electromagnética pixel art expandiéndose desde el centro
+        const float radioOnda = 32.0f + t * 420.0f;
+        if (radioOnda < 860.0f)
+        {
+            const float alphaOnda = std::max(0.0f, 1.0f - (radioOnda / 860.0f));
+            const sf::Uint8 aO = static_cast<sf::Uint8>(235.0f * alphaOnda);
+            dibujarAnilloPixel(quads, cx, cy, radioOnda, 8.0f,
+                               sf::Color(255, 225, 95, aO),
+                               sf::Color(255, 255, 235, aO));
+            if (radioOnda > 56.0f)
+            {
+                dibujarAnilloPixel(quads, cx, cy, radioOnda - 28.0f, 8.0f,
+                                   sf::Color(115, 235, 255, static_cast<sf::Uint8>(aO * 0.75f)),
+                                   sf::Color(225, 250, 255, static_cast<sf::Uint8>(aO * 0.75f)));
+            }
+        }
+        destino.draw(quads);
         return;
     }
 
     if (alertaDesastre.tipo == TipoDesastre::Meteoritos)
     {
+        static const char* const METEORO[6] = {
+            ".33...",
+            "3223..",
+            "32112.",
+            ".21112",
+            "..2112",
+            "...22."
+        };
+        const sf::Color palMeteoro[3] = {
+            sf::Color(90, 58, 48, 245),   // 1 roca oscura
+            sf::Color(255, 115, 30, 245), // 2 fuego naranja
+            sf::Color(255, 232, 95, 245)  // 3 chispa amarilla
+        };
+
         for (int i = 0; i < 8; ++i)
         {
             const float inicio = static_cast<float>(i) * 0.28f;
@@ -1192,145 +1489,186 @@ void MotorGrafico::dibujarAnimacionDesastre(sf::RenderTarget& destino) const
                 const float mx = (destinoX - 280.0f) + 280.0f * f;
                 const float my = (destinoY - 320.0f) + 320.0f * f;
 
-                if (mx >= 0.0f && mx <= tamanoMundo.x && my >= 0.0f && my <= tamanoMundo.y)
+                // Estela pixelada de bloques de fuego atrás del meteorito
+                for (int s = 1; s <= 7; ++s)
                 {
-                    sf::Vertex estela[2] = {
-                        sf::Vertex(sf::Vector2f(std::max(0.0f, mx - 55.0f), std::max(0.0f, my - 63.0f)),
-                                   sf::Color(255, 110, 20, 0)),
-                        sf::Vertex(sf::Vector2f(mx, my), sf::Color(255, 180, 50, 235))
-                    };
-                    destino.draw(estela, 2, sf::Lines);
-
-                    sf::CircleShape roca(10.0f);
-                    roca.setOrigin(10.0f, 10.0f);
-                    roca.setPosition(mx, my);
-                    roca.setFillColor(sf::Color(255, 125, 35, 240));
-                    roca.setOutlineThickness(3.0f);
-                    roca.setOutlineColor(sf::Color(255, 235, 110, 230));
-                    destino.draw(roca);
+                    const float ex = snap(mx - static_cast<float>(s) * 10.0f, 4.0f);
+                    const float ey = snap(my - static_cast<float>(s) * 11.5f, 4.0f);
+                    const sf::Uint8 aEst = static_cast<sf::Uint8>(std::max(0, 225 - s * 28));
+                    const float tamB = (s <= 3) ? 8.0f : 4.0f;
+                    const sf::Color cEst = (s % 2 == 0) ? sf::Color(255, 220, 80, aEst)
+                                                        : sf::Color(255, 105, 25, aEst);
+                    agregarQuad(quads, ex, ey, tamB, tamB, cEst);
                 }
+
+                dibujarMatriz(quads, mx, my, 4.0f, METEORO, 6, 6, palMeteoro);
             }
             else
             {
+                // Explosión y cráter pixel art al impactar
                 const float impF = (localT - 0.75f) / 1.05f;
-                const float rImp = 12.0f + impF * 70.0f;
-                const sf::Uint8 aImp = static_cast<sf::Uint8>(220.0f * (1.0f - impF) * fade);
+                const float rImp = 12.0f + impF * 66.0f;
+                const sf::Uint8 aImp = static_cast<sf::Uint8>(235.0f * (1.0f - impF) * fade);
 
-                sf::CircleShape anillo(rImp, 32);
-                anillo.setOrigin(rImp, rImp);
-                anillo.setPosition(destinoX, destinoY);
-                anillo.setFillColor(sf::Color(255, 110, 30, static_cast<sf::Uint8>(aImp / 3)));
-                anillo.setOutlineThickness(4.0f);
-                anillo.setOutlineColor(sf::Color(255, 175, 65, aImp));
-                destino.draw(anillo);
+                dibujarAnilloPixel(quads, destinoX, destinoY, rImp, 6.0f,
+                                   sf::Color(255, 120, 30, aImp),
+                                   sf::Color(255, 225, 95, aImp));
+
+                // Chispas cuadradas saltando desde el impacto
+                for (int c = 0; c < 6; ++c)
+                {
+                    const float ang = static_cast<float>(c) * 1.0472f + static_cast<float>(i);
+                    const float cx = snap(destinoX + std::cos(ang) * (rImp * 0.75f), 4.0f);
+                    const float cy = snap(destinoY + std::sin(ang) * (rImp * 0.75f), 4.0f);
+                    agregarQuad(quads, cx, cy, 4.0f, 4.0f, sf::Color(255, 240, 140, aImp));
+                }
             }
         }
+        destino.draw(quads);
         return;
     }
 
     if (alertaDesastre.tipo == TipoDesastre::Sobrepoblacion)
     {
-        sf::RectangleShape velo(tamanoMundo);
-        velo.setFillColor(sf::Color(40, 8, 18, static_cast<sf::Uint8>(115.0f * fade)));
-        destino.draw(velo);
+        // Velo carmesí oscuro
+        agregarQuad(quads, 0.0f, 0.0f, tamanoMundo.x, tamanoMundo.y,
+                    sf::Color(40, 8, 18, static_cast<sf::Uint8>(115.0f * fade)));
+
+        // La Parca 100% pixel art (2 frames alternando el barrido de la guadaña)
+        static const char* const PARCA_A[16] = {
+            ".....22222......",
+            "....2111112..555",
+            "...2111111125555",
+            "...21311131254..",
+            "...211111112.4..",
+            "....2111112..4..",
+            "...211111112.4..",
+            "..211111111124..",
+            "..21111111114...",
+            ".211111111114...",
+            ".211111111142...",
+            ".211111111142...",
+            "21111111114112..",
+            "21111111114112..",
+            "22112112114222..",
+            "..22.22.224....."
+        };
+        static const char* const PARCA_B[16] = {
+            ".....22222......",
+            "....2111112.....",
+            "...211111112....",
+            "...2131113125555",
+            "...211111112555.",
+            "....2111112..4..",
+            "...211111112.4..",
+            "..211111111124..",
+            "..21111111114...",
+            ".211111111114...",
+            ".211111111142...",
+            ".211111111142...",
+            "21111111114112..",
+            "21111111114112..",
+            "22112112114222..",
+            "..22.22.224....."
+        };
+
+        const sf::Uint8 a = static_cast<sf::Uint8>(248.0f * fade);
+        const sf::Color palParca[5] = {
+            sf::Color(16, 14, 24, a),    // 1 túnica negra
+            sf::Color(165, 35, 58, a),   // 2 borde carmesí
+            sf::Color(255, 45, 55, a),   // 3 ojos rojos brillantes
+            sf::Color(125, 88, 62, a),   // 4 mango de guadaña
+            sf::Color(225, 238, 250, a)  // 5 hoja plateada
+        };
 
         const float px = tamanoMundo.x / 2.0f;
-        const float py = 148.0f + std::sin(t * 3.5f) * 8.0f;
-        const sf::Uint8 a = static_cast<sf::Uint8>(245.0f * fade);
-
-        sf::CircleShape aura(74.0f);
-        aura.setOrigin(74.0f, 74.0f);
-        aura.setPosition(px, py);
-        aura.setFillColor(sf::Color(180, 20, 45, static_cast<sf::Uint8>(65.0f * fade)));
-        destino.draw(aura);
-
-        sf::ConvexShape manto(3);
-        manto.setPoint(0, sf::Vector2f(px, py - 46.0f));
-        manto.setPoint(1, sf::Vector2f(px - 56.0f, py + 62.0f));
-        manto.setPoint(2, sf::Vector2f(px + 56.0f, py + 62.0f));
-        manto.setFillColor(sf::Color(18, 16, 26, a));
-        manto.setOutlineThickness(3.0f);
-        manto.setOutlineColor(sf::Color(150, 35, 55, a));
-        destino.draw(manto);
-
-        sf::CircleShape capucha(26.0f);
-        capucha.setOrigin(26.0f, 26.0f);
-        capucha.setPosition(px, py - 24.0f);
-        capucha.setFillColor(sf::Color(10, 8, 16, a));
-        capucha.setOutlineThickness(2.5f);
-        capucha.setOutlineColor(sf::Color(165, 40, 60, a));
-        destino.draw(capucha);
-
-        sf::CircleShape ojoIzq(4.5f);
-        ojoIzq.setOrigin(4.5f, 4.5f);
-        ojoIzq.setPosition(px - 9.0f, py - 24.0f);
-        ojoIzq.setFillColor(sf::Color(255, 45, 55, a));
-        destino.draw(ojoIzq);
-
-        sf::CircleShape ojoDer(4.5f);
-        ojoDer.setOrigin(4.5f, 4.5f);
-        ojoDer.setPosition(px + 9.0f, py - 24.0f);
-        ojoDer.setFillColor(sf::Color(255, 45, 55, a));
-        destino.draw(ojoDer);
-
-        const float angGuadana = -35.0f + std::sin(t * 5.0f) * 28.0f;
-        sf::RectangleShape mango(sf::Vector2f(7.0f, 130.0f));
-        mango.setOrigin(3.5f, 95.0f);
-        mango.setPosition(px + 42.0f, py + 24.0f);
-        mango.setRotation(angGuadana);
-        mango.setFillColor(sf::Color(115, 85, 65, a));
-        destino.draw(mango);
-
-        const float rad = (angGuadana - 90.0f) * 3.14159265f / 180.0f;
-        const float puntaX = (px + 42.0f) + std::cos(rad) * 90.0f;
-        const float puntaY = (py + 24.0f) + std::sin(rad) * 90.0f;
-        sf::ConvexShape hoja(4);
-        hoja.setPoint(0, sf::Vector2f(0.0f, 0.0f));
-        hoja.setPoint(1, sf::Vector2f(-54.0f, -8.0f));
-        hoja.setPoint(2, sf::Vector2f(-70.0f, 14.0f));
-        hoja.setPoint(3, sf::Vector2f(-12.0f, 12.0f));
-        hoja.setPosition(puntaX, puntaY);
-        hoja.setRotation(angGuadana);
-        hoja.setFillColor(sf::Color(220, 232, 245, a));
-        hoja.setOutlineThickness(2.0f);
-        hoja.setOutlineColor(sf::Color(255, 90, 100, a));
-        destino.draw(hoja);
+        const float py = 148.0f + snap(std::sin(t * 3.5f) * 8.0f, 4.0f);
+        const bool frameB = (static_cast<int>(t * 4.5f) % 2) == 1;
+        dibujarMatriz(quads, px, py, 8.0f, frameB ? PARCA_B : PARCA_A, 16, 16, palParca);
+        destino.draw(quads);
         return;
     }
 
-    if (alertaDesastre.tipo == TipoDesastre::PatriaMilagro)
+    if (alertaDesastre.tipo == TipoDesastre::ErupcionVolcanica)
     {
-        constexpr int COLUMNAS = 40;
-        const float anchoCol = tamanoMundo.x / static_cast<float>(COLUMNAS);
-        const sf::Uint8 alphaBandera = static_cast<sf::Uint8>(135.0f * fade);
+        // 1. Velo cálido de humo y lava
+        agregarQuad(quads, 0.0f, 0.0f, tamanoMundo.x, tamanoMundo.y,
+                    sf::Color(55, 16, 10, static_cast<sf::Uint8>(105.0f * fade)));
 
-        for (int i = 0; i < COLUMNAS; ++i)
+        // 2. Volcán pixel art con cráter incandescente y lava cayendo (arriba del banner)
+        static const char* const VOLCAN_A[11] = {
+            "......54445.......",
+            ".....4433344......",
+            "......33333.......",
+            ".....1143411......",
+            "....111343111.....",
+            "...12114311211....",
+            "..1211131111211...",
+            ".122111411111211..",
+            "12211111111111211.",
+            "121111111111111211",
+            "111111111111111111"
+        };
+        static const char* const VOLCAN_B[11] = {
+            ".....5433345......",
+            "......43334.......",
+            ".....5343435......",
+            ".....1134311......",
+            "....111434111.....",
+            "...12113411211....",
+            "..1211141111211...",
+            ".122111311111211..",
+            "12211114111111211.",
+            "121111111111111211",
+            "111111111111111111"
+        };
+
+        const sf::Uint8 aV = static_cast<sf::Uint8>(245.0f * fade);
+        const sf::Color palVolcan[5] = {
+            sf::Color(52, 38, 36, aV),    // 1 roca volcánica oscura
+            sf::Color(84, 62, 56, aV),    // 2 relieve de roca
+            sf::Color(255, 78, 28, aV),   // 3 lava roja-naranja
+            sf::Color(255, 178, 42, aV),  // 4 lava dorada brillante
+            sf::Color(110, 96, 98, static_cast<sf::Uint8>(190.0f * fade)) // 5 humo/ceniza
+        };
+
+        const float vx = tamanoMundo.x / 2.0f;
+        const float vy = 152.0f;
+        const bool frameB = (static_cast<int>(t * 5.0f) % 2) == 1;
+        dibujarMatriz(quads, vx, vy, 8.0f, frameB ? VOLCAN_B : VOLCAN_A, 11, 18, palVolcan);
+
+        // 3. Bombas de lava pixel art disparadas en arco parabólico desde el cráter
+        for (int i = 0; i < 10; ++i)
         {
-            const float x = static_cast<float>(i) * anchoCol;
-            const float onda = std::sin(t * 6.0f + static_cast<float>(i) * 0.35f) * 14.0f;
+            const float ciclo = std::fmod(t + static_cast<float>(i) * 0.24f, 1.35f);
+            const float dir = (i % 2 == 0) ? 1.0f : -1.0f;
+            const float velX = dir * (95.0f + static_cast<float>((i * 47) % 180));
+            const float velY = -(180.0f + static_cast<float>((i * 31) % 110));
+            const float bx = snap(vx + velX * ciclo, 4.0f);
+            const float by = snap((vy - 36.0f) + velY * ciclo + 260.0f * ciclo * ciclo, 4.0f);
+            const sf::Uint8 aB = static_cast<sf::Uint8>(235.0f * fade);
 
-            const float hAmarillo = tamanoMundo.y * 0.50f;
-            const float hAzul = tamanoMundo.y * 0.25f;
-            const float hRojo = tamanoMundo.y * 0.25f;
-
-            sf::RectangleShape franjaAm(sf::Vector2f(anchoCol + 1.0f, hAmarillo + 20.0f));
-            franjaAm.setPosition(x, onda - 10.0f);
-            franjaAm.setFillColor(sf::Color(252, 209, 22, alphaBandera));
-            destino.draw(franjaAm);
-
-            sf::RectangleShape franjaAz(sf::Vector2f(anchoCol + 1.0f, hAzul + 4.0f));
-            franjaAz.setPosition(x, hAmarillo + onda);
-            franjaAz.setFillColor(sf::Color(0, 56, 147, alphaBandera));
-            destino.draw(franjaAz);
-
-            sf::RectangleShape franjaRo(sf::Vector2f(anchoCol + 1.0f, hRojo + 24.0f));
-            franjaRo.setPosition(x, hAmarillo + hAzul + onda);
-            franjaRo.setFillColor(sf::Color(206, 17, 38, alphaBandera));
-            destino.draw(franjaRo);
+            agregarQuad(quads, bx - 4.0f, by - 4.0f, 8.0f, 8.0f, sf::Color(255, 85, 25, aB));
+            agregarQuad(quads, bx, by, 4.0f, 4.0f, sf::Color(255, 230, 95, aB));
         }
-    }
 
-    (void)progreso;
+        // 4. Lluvia de ceniza y brasas pixel art por todo el mapa
+        const float px = 4.0f;
+        for (int i = 0; i < 95; ++i)
+        {
+            const float seedX = static_cast<float>((i * 89) % static_cast<int>(tamanoMundo.x));
+            const float seedY = static_cast<float>((i * 149) % static_cast<int>(tamanoMundo.y));
+            const float ex = snap(std::fmod(seedX + t * 55.0f, tamanoMundo.x), px);
+            const float ey = snap(std::fmod(seedY + t * 180.0f, tamanoMundo.y), px);
+            const sf::Color cBrasa = (i % 3 == 0)
+                                         ? sf::Color(255, 195, 55, static_cast<sf::Uint8>(215.0f * fade))
+                                         : (i % 3 == 1)
+                                               ? sf::Color(255, 85, 30, static_cast<sf::Uint8>(205.0f * fade))
+                                               : sf::Color(150, 140, 145, static_cast<sf::Uint8>(165.0f * fade));
+            agregarQuad(quads, ex, ey, px, px, cBrasa);
+        }
+        destino.draw(quads);
+    }
 }
 
 void MotorGrafico::mezclarBolsaComida()

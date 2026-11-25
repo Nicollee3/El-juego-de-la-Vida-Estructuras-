@@ -26,9 +26,9 @@ enum class TipoDesastre
     Ninguno,
     Sobrepoblacion,
     Meteoritos,
-    Diluvio,
-    BombaNuclear,
-    PatriaMilagro
+    LluviaAcida,
+    TormentaSolar,
+    ErupcionVolcanica
 };
 
 /*
@@ -57,9 +57,9 @@ public:
 
     // Impacto en número de bichitos de cada desastre del catálogo
     static constexpr int BAJAS_METEORITOS = 20;
-    static constexpr int BAJAS_DILUVIO = 30;
-    static constexpr int BAJAS_BOMBA_NUCLEAR = 100;
-    static constexpr int BAJAS_PATRIA_MILAGRO = 60;
+    static constexpr int BAJAS_LLUVIA_ACIDA = 30;
+    static constexpr int BAJAS_TORMENTA_SOLAR = 100;
+    static constexpr int BAJAS_ERUPCION_VOLCANICA = 60;
 
     // Control de sobrepoblación y desastres aleatorios poco frecuentes
     static constexpr int UMBRAL_SOBREPOBLACION = 160;

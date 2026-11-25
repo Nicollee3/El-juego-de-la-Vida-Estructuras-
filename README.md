@@ -40,4 +40,4 @@ Cada vez que un bichito muere (por cualquiera de las 3 causas) se elimina del `A
      - **Nivel 1 (mueren primero):** poca vida (`< 25`), enfermos o viejitos (`>= 75%` de su `edadMaxima`).
      - **Nivel 2 (intermedio):** jóvenes y adultos sanos.
      - **Nivel 3 (mueren al final):** inmunes y recién nacidos (`edad <= 10`).
-   - Impacto por evento: **Meteoritos** (`20`), **Diluvio** (`30`), **Patria Milagro** (`60`), **Bomba Nuclear** (`100`) y **Sobrepoblación automática** (`> 160` reduce a `140` priorizando a los más viejos). Los inmortales están exentos.
+   - Impacto por evento: **Meteoritos** (`20`), **Lluvia Ácida** (`30`), **Erupción Volcánica** (`60`), **Tormenta Solar** (`100`) y **Sobrepoblación automática** (`> 160` reduce a `140` priorizando a los más viejos). Los inmortales están exentos.
