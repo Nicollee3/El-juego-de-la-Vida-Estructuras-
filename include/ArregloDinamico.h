@@ -97,6 +97,8 @@ public:
         if (N * aureo * aureo < tamano && tamano > capacidadInicialGuardada)
         {
             int ntamano = (int)(N * aureo);
+            if (ntamano < capacidadInicialGuardada)
+                ntamano = capacidadInicialGuardada;
             T *ndatos = new T[ntamano];
             for (int i = 0; i < N; i++)
             {
