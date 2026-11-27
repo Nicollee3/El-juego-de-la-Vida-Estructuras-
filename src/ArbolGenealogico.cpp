@@ -1,4 +1,6 @@
 #include "ArbolGenealogico.h"
+#include <cassert>
+#include <iostream>
 
 ArbolLinajeGen::ArbolLinajeGen(GenEstatico genRastreado)
     : gen(genRastreado) {}
@@ -11,7 +13,11 @@ ArbolLinajeGen::~ArbolLinajeGen()
 void ArbolLinajeGen::limpiar()
 {
     for (int i = 0; i < fundadores.longitud(); ++i)
-        destruirRama(fundadores.obtenerRef(i));
+    {
+        NodoGenealogico* raiz = fundadores.obtenerRef(i);
+        if (raiz != nullptr)
+            destruirRama(raiz);
+    }
     fundadores.vaciar();
     nodos.vaciar();
 }
@@ -30,28 +36,57 @@ void ArbolLinajeGen::registrarPortador(int id, int idPadre, int idMadre,
                                        const GenesVariables& genes,
                                        bool permitirFundadorAdicional)
 {
+#ifndef NDEBUG
+    if (nodos.contiene(id))
+        std::cerr << "Aviso: ID de bichito ya presente en el arbol genealogico: "
+                  << id << std::endl;
+#endif
     if (nodos.contiene(id))
         return;
 
     NodoGenealogico* padre = nullptr;
+    NodoGenealogico* madre = nullptr;
     if (idPadre >= 0)
         nodos.buscar(idPadre, padre);
-    if (padre == nullptr && idMadre >= 0)
-        nodos.buscar(idMadre, padre);
+    if (idMadre >= 0)
+        nodos.buscar(idMadre, madre);
 
-    if (padre == nullptr && estaBloqueado() && !permitirFundadorAdicional)
-        return;
+    if (padre == nullptr)
+        padre = madre;
+    else if (madre == padre)
+        madre = nullptr;
+
+    if (padre == nullptr && (estaBloqueado() || permitirFundadorAdicional))
+        std::cerr << "Aviso: bichito #" << id
+                  << " no encontro padre en el arbol y se registra como raiz adicional."
+                  << std::endl;
 
     const int idPadreRama = padre == nullptr ? -1 : padre->idBichito;
+    const int idOtroProgenitor =
+        madre != nullptr && madre != padre ? madre->idBichito : -1;
     const int idProgenitor = padre == nullptr
         ? (idPadre >= 0 ? idPadre : idMadre)
         : -1;
+    const bool mutacionFundadora =
+        padre == nullptr && !estaBloqueado() && !permitirFundadorAdicional;
+    const int profundidadNodo =
+        padre == nullptr ? 0 : padre->profundidad + 1;
     NodoGenealogico* nodo = new NodoGenealogico(
-        id, idPadreRama, idProgenitor, generacion, porMitosis,
-        padre == nullptr, genes);
+        id, idPadreRama, idProgenitor, idOtroProgenitor,
+        generacion, profundidadNodo, porMitosis,
+        mutacionFundadora, genes);
     nodos.insertar(id, nodo);
     if (padre != nullptr)
+    {
         padre->hijos.generar(nodo);
+        nodo->ramaPadre = padre;
+        if (padre->hijos.longitud() > 1)
+        {
+            for (NodoGenealogico* ancestro = padre; ancestro != nullptr;
+                 ancestro = ancestro->ramaPadre)
+                ++ancestro->hojas;
+        }
+    }
     else
         fundadores.generar(nodo);
 }

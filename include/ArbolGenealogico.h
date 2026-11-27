@@ -8,20 +8,27 @@
 struct NodoGenealogico
 {
     int idBichito;
-    int idPadre;
+    int idPadreRama;
     int idProgenitor;
+    int idOtroProgenitor;
     int generacion;
+    int profundidad;
     bool estadoVida;
     bool porMitosis;
     bool mutacionFundadora;
     GenesVariables genesVariables;
+    NodoGenealogico* ramaPadre;
+    int hojas;
     ArregloDinamico<NodoGenealogico*> hijos;
 
-    NodoGenealogico(int id, int padre, int progenitor, int gen, bool mitosis,
+    NodoGenealogico(int id, int padreRama, int progenitor, int otroProgenitor,
+                    int gen, int profundidadNodo, bool mitosis,
                     bool origenMutacion, const GenesVariables& genes)
-        : idBichito(id), idPadre(padre), idProgenitor(progenitor), generacion(gen),
-          estadoVida(true), porMitosis(mitosis), mutacionFundadora(origenMutacion),
-          genesVariables(genes) {}
+        : idBichito(id), idPadreRama(padreRama), idProgenitor(progenitor),
+          idOtroProgenitor(otroProgenitor), generacion(gen),
+          profundidad(profundidadNodo), estadoVida(true), porMitosis(mitosis),
+          mutacionFundadora(origenMutacion), genesVariables(genes),
+          ramaPadre(nullptr), hojas(1) {}
 };
 
 class ArbolLinajeGen
