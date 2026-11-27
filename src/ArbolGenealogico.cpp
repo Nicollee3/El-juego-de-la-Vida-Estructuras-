@@ -26,9 +26,19 @@ void ArbolLinajeGen::destruirRama(NodoGenealogico* nodo)
 {
     if (nodo == nullptr)
         return;
-    for (int i = 0; i < nodo->hijos.longitud(); ++i)
-        destruirRama(nodo->hijos.obtenerRef(i));
-    delete nodo;
+
+    ArregloDinamico<NodoGenealogico*> pila(16);
+    pila.generar(nodo);
+    while (pila.longitud() > 0)
+    {
+        NodoGenealogico* actual = pila.obtener(pila.longitud() - 1);
+        pila.borrar();
+        if (actual == nullptr)
+            continue;
+        for (int i = 0; i < actual->hijos.longitud(); ++i)
+            pila.generar(actual->hijos.obtenerRef(i));
+        delete actual;
+    }
 }
 
 void ArbolLinajeGen::registrarPortador(int id, int idPadre, int idMadre,

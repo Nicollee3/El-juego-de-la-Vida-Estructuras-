@@ -42,10 +42,11 @@ public:
      * @details Inicializa el contador de elementos (N) en 0, asigna una capacidad inicial (10)
      * y reserva memoria para el arreglo de elementos llamado datos.
      */
-    ArregloDinamico()
+    explicit ArregloDinamico(int capacidadInicial = 10)
     {
         N = 0;
-        tamano = 10;
+        tamano = capacidadInicial > 0 ? capacidadInicial : 10;
+        capacidadInicialGuardada = tamano;
         datos = new T[tamano];
     };
     /*
@@ -93,7 +94,7 @@ public:
     {
         if (N <= 0)
             return;
-        if (N * aureo * aureo < tamano && tamano > 10)
+        if (N * aureo * aureo < tamano && tamano > capacidadInicialGuardada)
         {
             int ntamano = (int)(N * aureo);
             T *ndatos = new T[ntamano];
@@ -133,7 +134,7 @@ public:
     void vaciar()
     {
         delete[] datos;
-        tamano = 10;
+        tamano = capacidadInicialGuardada;
         N = 0;
         datos = new T[tamano];
     }
@@ -187,6 +188,7 @@ protected:
     T *datos; // datos es un apuntador a la dirección de memoria donde están guardados los objetos de tipo T
     int N;
     int tamano;
+    int capacidadInicialGuardada;
     double aureo = 1.618;
 };
 

@@ -28,7 +28,7 @@ struct NodoGenealogico
           idOtroProgenitor(otroProgenitor), generacion(gen),
           profundidad(profundidadNodo), estadoVida(true), porMitosis(mitosis),
           mutacionFundadora(origenMutacion), genesVariables(genes),
-          ramaPadre(nullptr), hojas(1) {}
+          ramaPadre(nullptr), hojas(1), hijos(2) {}
 };
 
 class ArbolLinajeGen
