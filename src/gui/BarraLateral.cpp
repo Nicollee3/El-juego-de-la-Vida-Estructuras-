@@ -105,20 +105,20 @@ BarraLateral::BarraLateral(GestorRecursos& recursos, MotorGrafico& motor, std::f
                                "ui/boton_barra_medio", tamMedio);
     btnMet->setColorTinte(sf::Color(255, 170, 115));
 
-    Boton* btnDil = crearBoton("Diluvio", sf::Vector2f(CX + 60.0f, 468),
-                               [this] { motor_.activarDesastre(TipoDesastre::Diluvio); },
-                               "ui/boton_barra_medio", tamMedio);
-    btnDil->setColorTinte(sf::Color(135, 205, 255));
+    Boton* btnAcida = crearBoton("Lluvia Ác.", sf::Vector2f(CX + 60.0f, 468),
+                                 [this] { motor_.activarDesastre(TipoDesastre::LluviaAcida); },
+                                 "ui/boton_barra_medio", tamMedio);
+    btnAcida->setColorTinte(sf::Color(145, 245, 115));
 
-    Boton* btnNuc = crearBoton("Nuclear", sf::Vector2f(CX - 60.0f, 514),
-                               [this] { motor_.activarDesastre(TipoDesastre::BombaNuclear); },
-                               "ui/boton_barra_medio", tamMedio);
-    btnNuc->setColorTinte(sf::Color(245, 230, 125));
+    Boton* btnSolar = crearBoton("T. Solar", sf::Vector2f(CX - 60.0f, 514),
+                                 [this] { motor_.activarDesastre(TipoDesastre::TormentaSolar); },
+                                 "ui/boton_barra_medio", tamMedio);
+    btnSolar->setColorTinte(sf::Color(255, 230, 115));
 
-    Boton* btnPat = crearBoton("Patria M.", sf::Vector2f(CX + 60.0f, 514),
-                               [this] { motor_.activarDesastre(TipoDesastre::PatriaMilagro); },
+    Boton* btnVol = crearBoton("Volcán", sf::Vector2f(CX + 60.0f, 514),
+                               [this] { motor_.activarDesastre(TipoDesastre::ErupcionVolcanica); },
                                "ui/boton_barra_medio", tamMedio);
-    btnPat->setColorTinte(sf::Color(255, 210, 95));
+    btnVol->setColorTinte(sf::Color(255, 130, 85));
 
     // --- Volver al menú ---
     Boton* btnMenu = crearBoton("Menú", sf::Vector2f(CX, 658), [this] {
