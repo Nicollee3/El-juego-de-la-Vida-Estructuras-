@@ -8,6 +8,15 @@
 
 namespace
 {
+    sf::Vector2i posicionMouse(const sf::RenderTarget& destino)
+    {
+        const sf::RenderWindow* ventana =
+            dynamic_cast<const sf::RenderWindow*>(&destino);
+        return ventana != nullptr
+            ? sf::Mouse::getPosition(*ventana)
+            : sf::Vector2i(-1000000, -1000000);
+    }
+
     const char* nombreGen(GenEstatico gen)
     {
         switch (gen)
@@ -275,7 +284,7 @@ void PanelGenetica::dibujarTarjeta(sf::RenderTarget& destino, GestorRecursos& re
 
     const GenEstatico genes[2] = {genoma.genEstatico1, genoma.genEstatico2};
     const float posicionesX[2] = {42.0f, 96.0f};
-    const sf::Vector2i mouse = sf::Mouse::getPosition();
+    const sf::Vector2i mouse = posicionMouse(destino);
     int hover = -1;
     for (int i = 0; i < 2; ++i)
     {
@@ -391,7 +400,7 @@ void PanelGenetica::dibujarArbol(sf::RenderTarget& destino, GestorRecursos& recu
                                   recursos.fuente(), 10, sf::Color(225, 230, 240),
                                   x - 14.0f, y + 13.0f);
         destino.draw(etiqueta);
-        const sf::Vector2i mouse = sf::Mouse::getPosition();
+        const sf::Vector2i mouse = posicionMouse(destino);
         const float dx = static_cast<float>(mouse.x) - x;
         const float dy = static_cast<float>(mouse.y) - y;
         if (dx * dx + dy * dy <= 13.0f * 13.0f)
