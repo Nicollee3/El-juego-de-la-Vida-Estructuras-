@@ -1,4 +1,5 @@
 #include "Bichito.h"
+#include "GeneradorId.h"
 #include "ArregloDinamico.h"
 #include "Diccionario.h"
 #include "RTree.h"
@@ -280,9 +281,7 @@ bool Bichito::reproducirseCon(Bichito& pareja, ArregloDinamico<Bichito>& poblaci
     const int generacionHijo = std::max(generacion, pareja.generacion) + 1;
     const float hijoX = (x + pareja.x) * 0.5f;
     const float hijoY = (y + pareja.y) * 0.5f;
-    int nuevoId = 1;
-    while (indices.contiene(nuevoId))
-        ++nuevoId;
+    const int nuevoId = GeneradorId::siguiente();
 
     Genoma genHijo = mezclarGenomas(genetica, pareja.genetica, 1.0f);
     Bichito hijo(nuevoId, 40.0f, hijoX, hijoY, genHijo);
@@ -395,11 +394,8 @@ void Bichito::actualizar(float dt, ArregloDinamico<Comida>& comidas,
         variables.metabolismo = mutar(variables.metabolismo, 0.016f, 0.1f, 5.0f);
         variables.edadMax = mutar(variables.edadMax, variables.edadMax * 0.016f, 20.0f, 300.0f);
         Genoma genClon(variables, genetica.genEstatico1, genetica.genEstatico2);
-        Bichito clon(1, vidaCompartida, clonX, clonY, genClon);
-        int nuevoId = 1;
-        while (indices.contiene(nuevoId))
-            ++nuevoId;
-        clon.setId(nuevoId);
+        Bichito clon(GeneradorId::siguiente(), vidaCompartida, clonX, clonY, genClon);
+        const int nuevoId = clon.getId();
         clon.setGeneracion(generacionHijo);
         clon.setPadres(padreId, -1, true);
         clon.setEdadMaxima(variables.edadMax);

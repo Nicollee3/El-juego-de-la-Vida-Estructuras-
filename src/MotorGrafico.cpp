@@ -1,4 +1,5 @@
 #include "MotorGrafico.h"
+#include "GeneradorId.h"
 #include "gui/Config.h"
 #include "gui/GestorRecursos.h"
 #include <algorithm>
@@ -158,12 +159,11 @@ void MotorGrafico::agregarBichitoAlFinal(Bichito bichito, bool permitirFundadorA
 {
     if (indicesBichitos.contiene(bichito.getId()))
     {
-        int idDisponible = 1;
-        while (indicesBichitos.contiene(idDisponible))
-        {
-            ++idDisponible;
-        }
-        bichito.setId(idDisponible);
+        bichito.setId(GeneradorId::siguiente());
+    }
+    else
+    {
+        GeneradorId::reservar(bichito.getId());
     }
 
     intentarMutarGenEstatico(bichito);
@@ -222,6 +222,7 @@ void MotorGrafico::vaciarPoblacion()
     colaEliminacion.vaciar();
     colaVejez.vaciar();
     registroGenetico.limpiar();
+    GeneradorId::reiniciar();
     panelGenetica.cerrar();
     tiempoSimulacion = 0.0f;
     muertesHambre = 0;
@@ -372,7 +373,6 @@ void MotorGrafico::vaciarComidas()
 
 void MotorGrafico::agregarBichito(GenEstatico gen)
 {
-    static int idNuevo = 1000;
     const int rangoX = std::max(1, static_cast<int>(tamanoMundo.x) - 80);
     const int rangoY = std::max(1, static_cast<int>(tamanoMundo.y) - 80);
     const float x = 40.0f + static_cast<float>(std::rand() % rangoX);
@@ -381,7 +381,7 @@ void MotorGrafico::agregarBichito(GenEstatico gen)
     const Genoma genoma = gen == GenEstatico::NINGUNO
         ? generarGenomaInicial()
         : Genoma(120.0f, gen);
-    Bichito b(idNuevo++, 40.0f, x, y, genoma);
+    Bichito b(GeneradorId::siguiente(), 40.0f, x, y, genoma);
     agregarBichitoAlFinal(b, gen != GenEstatico::NINGUNO);
 }
 
@@ -657,7 +657,7 @@ void MotorGrafico::procesarEscenarioReproduccion(float dt)
                 float hijoX = (b1.getX() + b2.getX()) / 2.0f;
                 float hijoY = (b1.getY() + b2.getY()) / 2.0f;
 
-                int nuevoId = poblacion.longitud() + 100;
+                const int nuevoId = GeneradorId::siguiente();
                 Bichito hijo(nuevoId, 40.0f, hijoX, hijoY);
                 hijo.setGeneracion(std::max(b1.getGeneracion(), b2.getGeneracion()) + 1);
                 hijo.setPadres(b1.getId(), b2.getId(), false);
