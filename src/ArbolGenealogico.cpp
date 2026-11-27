@@ -46,6 +46,7 @@ void ArbolLinajeGen::registrarPortador(int id, int idPadre, int idMadre,
                                        const GenesVariables& genes,
                                        bool permitirFundadorAdicional)
 {
+    // Ahora el generador asigna IDs unicos en todo el registro, incluso entre vivos y muertos.
 #ifndef NDEBUG
     if (nodos.contiene(id))
         std::cerr << "Aviso: ID de bichito ya presente en el arbol genealogico: "
@@ -121,28 +122,43 @@ RegistroGenetico::RegistroGenetico()
       inmortal(GenEstatico::INMORTAL),
       mitosis(GenEstatico::MITOSIS) {}
 
-ArbolLinajeGen& RegistroGenetico::arbol(GenEstatico gen)
+ArbolLinajeGen* RegistroGenetico::buscarArbol(GenEstatico gen)
 {
     switch (gen)
     {
-    case GenEstatico::INMUNIDAD: return inmunidad;
-    case GenEstatico::CANIBALISMO: return canibalismo;
-    case GenEstatico::VAMPIRISMO: return vampirismo;
-    case GenEstatico::TELETRANSPORTARSE: return teletransporte;
-    case GenEstatico::INMORTAL: return inmortal;
-    case GenEstatico::MITOSIS: return mitosis;
-    case GenEstatico::NINGUNO: default: return inmunidad;
+    case GenEstatico::INMUNIDAD: return &inmunidad;
+    case GenEstatico::CANIBALISMO: return &canibalismo;
+    case GenEstatico::VAMPIRISMO: return &vampirismo;
+    case GenEstatico::TELETRANSPORTARSE: return &teletransporte;
+    case GenEstatico::INMORTAL: return &inmortal;
+    case GenEstatico::MITOSIS: return &mitosis;
+    case GenEstatico::NINGUNO: default: return nullptr;
     }
+}
+
+const ArbolLinajeGen* RegistroGenetico::buscarArbol(GenEstatico gen) const
+{
+    return const_cast<RegistroGenetico*>(this)->buscarArbol(gen);
+}
+
+ArbolLinajeGen& RegistroGenetico::arbol(GenEstatico gen)
+{
+    ArbolLinajeGen* encontrado = buscarArbol(gen);
+    assert(encontrado != nullptr);
+    return *encontrado;
 }
 
 const ArbolLinajeGen& RegistroGenetico::arbol(GenEstatico gen) const
 {
-    return const_cast<RegistroGenetico*>(this)->arbol(gen);
+    const ArbolLinajeGen* encontrado = buscarArbol(gen);
+    assert(encontrado != nullptr);
+    return *encontrado;
 }
 
 bool RegistroGenetico::puedeMutar(GenEstatico gen) const
 {
-    return gen != GenEstatico::NINGUNO && !arbol(gen).estaBloqueado();
+    const ArbolLinajeGen* encontrado = buscarArbol(gen);
+    return encontrado != nullptr && !encontrado->estaBloqueado();
 }
 
 void RegistroGenetico::registrarBichito(int id, int idPadre, int idMadre,
@@ -156,10 +172,12 @@ void RegistroGenetico::registrarBichito(int id, int idPadre, int idMadre,
         if (genes[i] != GenEstatico::NINGUNO &&
             (i == 0 || genes[i] != genes[0]))
         {
-            arbol(genes[i]).registrarPortador(id, idPadre, idMadre,
-                                             generacion, porMitosis,
-                                             genoma.variables(),
-                                             permitirFundadorAdicional);
+            ArbolLinajeGen* encontrado = buscarArbol(genes[i]);
+            if (encontrado != nullptr)
+                encontrado->registrarPortador(id, idPadre, idMadre,
+                                              generacion, porMitosis,
+                                              genoma.variables(),
+                                              permitirFundadorAdicional);
         }
     }
 }

@@ -49,6 +49,8 @@ public:
     NodoGenealogico* fundador(int indice) { return fundadores.obtenerRef(indice); }
     int cantidadPortadores() const { return nodos.getElementos(); }
     GenEstatico genRastreado() const { return gen; }
+    // Se mantiene bloqueada la mutacion mientras exista algun fundador,
+    // incluso si todos sus portadores estan muertos.
     bool estaBloqueado() const { return fundadores.longitud() > 0; }
 
 private:
@@ -78,6 +80,8 @@ private:
     ArbolLinajeGen teletransporte;
     ArbolLinajeGen inmortal;
     ArbolLinajeGen mitosis;
+    ArbolLinajeGen* buscarArbol(GenEstatico gen);
+    const ArbolLinajeGen* buscarArbol(GenEstatico gen) const;
 };
 
 #endif
