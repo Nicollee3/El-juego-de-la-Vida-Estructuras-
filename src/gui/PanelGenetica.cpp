@@ -70,12 +70,7 @@ namespace
 
     int hojas(NodoGenealogico* nodo)
     {
-        if (nodo->hijos.longitud() == 0)
-            return 1;
-        int total = 0;
-        for (int i = 0; i < nodo->hijos.longitud(); ++i)
-            total += hojas(nodo->hijos.obtenerRef(i));
-        return total;
+        return nodo != nullptr ? nodo->hojas : 0;
     }
 
 }
@@ -357,14 +352,28 @@ void PanelGenetica::dibujarArbol(sf::RenderTarget& destino, GestorRecursos& recu
     NodoGenealogico* raiz = arbol.fundador(indiceFundador);
     const float graphTop = 265.0f;
     const float graphBottom = Config::ALTO_MUNDO - 30.0f;
-    const int genBase = raiz->generacion;
+    const float espacioDisponible = graphBottom - graphTop;
+    const int totalHojas = std::max(1, raiz->hojas);
+    const float alturaTotal =
+        static_cast<float>(totalHojas) *
+        std::max(26.0f, espacioDisponible / static_cast<float>(totalHojas)) *
+        zoom;
+    const float leafHeight = alturaTotal / static_cast<float>(totalHojas);
+    const float espaciadoEfectivo = leafHeight;
     NodoGenealogico* hovered = nullptr;
 
     std::function<void(NodoGenealogico*, float, float)> dibujarNodo;
     dibujarNodo = [&](NodoGenealogico* nodo, float top, float bottom)
     {
-        const float x = 70.0f + (nodo->generacion - genBase) * 125.0f * zoom + desplazamiento.x;
+        const float x = 70.0f + (nodo->profundidad - raiz->profundidad) * 125.0f * zoom +
+                        desplazamiento.x;
         const float y = (top + bottom) * 0.5f + desplazamiento.y;
+        const float tramoTop = top + desplazamiento.y;
+        const float tramoBottom = bottom + desplazamiento.y;
+        if (tramoBottom < graphTop || tramoTop > Config::ALTO_MUNDO)
+            return;
+        if (x > Config::ANCHO_MUNDO)
+            return;
         int totalHijosHojas = 0;
         for (int i = 0; i < nodo->hijos.longitud(); ++i)
             totalHijosHojas += hojas(nodo->hijos.obtenerRef(i));
@@ -375,7 +384,8 @@ void PanelGenetica::dibujarArbol(sf::RenderTarget& destino, GestorRecursos& recu
             const float alto = (bottom - top) *
                 static_cast<float>(hojas(hijo)) / static_cast<float>(std::max(1, totalHijosHojas));
             const float childY = cursor + alto * 0.5f + desplazamiento.y;
-            const float childX = 70.0f + (hijo->generacion - genBase) * 125.0f * zoom +
+            const float childX = 70.0f +
+                                 (hijo->profundidad - raiz->profundidad) * 125.0f * zoom +
                                  desplazamiento.x;
             sf::Vertex linea[2] = {
                 sf::Vertex(sf::Vector2f(x + 10.0f, y), sf::Color(95, 125, 165)),
@@ -396,17 +406,20 @@ void PanelGenetica::dibujarArbol(sf::RenderTarget& destino, GestorRecursos& recu
         circulo.setOutlineColor(nodo->idBichito == idSeleccionado ?
                                 sf::Color::White : sf::Color(25, 30, 40));
         destino.draw(circulo);
-        sf::Text etiqueta = texto("#" + std::to_string(nodo->idBichito),
-                                  recursos.fuente(), 10, sf::Color(225, 230, 240),
-                                  x - 14.0f, y + 13.0f);
-        destino.draw(etiqueta);
+        if (espaciadoEfectivo >= 20.0f)
+        {
+            sf::Text etiqueta = texto("#" + std::to_string(nodo->idBichito),
+                                      recursos.fuente(), 10, sf::Color(225, 230, 240),
+                                      x - 14.0f, y + 13.0f);
+            destino.draw(etiqueta);
+        }
         const sf::Vector2i mouse = posicionMouse(destino);
         const float dx = static_cast<float>(mouse.x) - x;
         const float dy = static_cast<float>(mouse.y) - y;
         if (dx * dx + dy * dy <= 13.0f * 13.0f)
             hovered = nodo;
     };
-    dibujarNodo(raiz, graphTop, graphBottom);
+    dibujarNodo(raiz, graphTop, graphTop + alturaTotal);
 
     if (hovered != nullptr)
     {
@@ -417,11 +430,15 @@ void PanelGenetica::dibujarArbol(sf::RenderTarget& destino, GestorRecursos& recu
                        ? " (progenitor #" + std::to_string(hovered->idProgenitor) + ")"
                        : "")
             : "";
+        const std::string otroProgenitor = hovered->idOtroProgenitor >= 0
+            ? " | Otro progenitor #" + std::to_string(hovered->idOtroProgenitor)
+            : "";
         const std::string detalles =
             "#" + std::to_string(hovered->idBichito) +
             (hovered->estadoVida ? " vivo" : " fallecido") +
             " | Gen. " + std::to_string(hovered->generacion) +
             origenMutacion +
+            otroProgenitor +
             " | VidaMax " + std::to_string(static_cast<int>(g.vidaMax)) +
             " | Vel. " + std::to_string(static_cast<int>(g.velocidad)) +
             " | Metab. " + std::to_string(g.metabolismo) +
