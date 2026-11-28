@@ -8,6 +8,8 @@
 
 namespace
 {
+    constexpr float ALTURA_CABECERA_ARBOL = 60.0f;
+
     sf::Vector2i posicionMouse(const sf::RenderTarget& destino)
     {
         const sf::RenderWindow* ventana =
@@ -183,21 +185,21 @@ bool PanelGenetica::procesarEvento(const sf::Event& evento, RegistroGenetico& re
     const float y = static_cast<float>(evento.mouseButton.y);
     if (arbolActivo)
     {
-        if (x > Config::ANCHO_MUNDO - 48.0f && y < 246.0f)
+        if (x > Config::ANCHO_MUNDO - 48.0f && y < ALTURA_CABECERA_ARBOL)
         {
             arbolActivo = false;
             return true;
         }
         ArbolLinajeGen& arbol = registro.arbol(genMostrado);
         if (x > Config::ANCHO_MUNDO - 145.0f && x < Config::ANCHO_MUNDO - 92.0f &&
-            y < 246.0f && arbol.cantidadFundadores() > 1)
+            y < ALTURA_CABECERA_ARBOL && arbol.cantidadFundadores() > 1)
         {
             indiceFundador = (indiceFundador + arbol.cantidadFundadores() - 1) %
                              arbol.cantidadFundadores();
             return true;
         }
         if (x > Config::ANCHO_MUNDO - 92.0f && x < Config::ANCHO_MUNDO - 48.0f &&
-            y < 246.0f && arbol.cantidadFundadores() > 1)
+            y < ALTURA_CABECERA_ARBOL && arbol.cantidadFundadores() > 1)
         {
             indiceFundador = (indiceFundador + 1) % arbol.cantidadFundadores();
             return true;
@@ -332,25 +334,26 @@ void PanelGenetica::dibujarArbol(sf::RenderTarget& destino, GestorRecursos& recu
     velo.setFillColor(sf::Color(5, 8, 15, 225));
     destino.draw(velo);
 
-    sf::RectangleShape cabecera(sf::Vector2f(Config::ANCHO_MUNDO, 56.0f));
-    cabecera.setPosition(0.0f, 190.0f);
+    sf::RectangleShape cabecera(sf::Vector2f(Config::ANCHO_MUNDO,
+                                             ALTURA_CABECERA_ARBOL));
+    cabecera.setPosition(0.0f, 0.0f);
     cabecera.setFillColor(sf::Color(18, 27, 43, 245));
     destino.draw(cabecera);
     destino.draw(texto("Linaje de " + std::string(nombreGen(genMostrado)),
-                       recursos.fuente(), 19, sf::Color(225, 238, 255), 20.0f, 203.0f));
+                       recursos.fuente(), 19, sf::Color(225, 238, 255), 20.0f, 13.0f));
     destino.draw(texto(std::to_string(indiceFundador + 1) + " / " +
                        std::to_string(arbol.cantidadFundadores()) + " origenes",
                        recursos.fuente(), 13, sf::Color(175, 195, 220),
-                       Config::ANCHO_MUNDO - 230.0f, 207.0f));
+                       Config::ANCHO_MUNDO - 330.0f, 17.0f));
     destino.draw(texto("[<]", recursos.fuente(), 14, sf::Color::White,
-                       Config::ANCHO_MUNDO - 143.0f, 207.0f));
+                       Config::ANCHO_MUNDO - 143.0f, 17.0f));
     destino.draw(texto("[>]", recursos.fuente(), 14, sf::Color::White,
-                       Config::ANCHO_MUNDO - 91.0f, 207.0f));
+                       Config::ANCHO_MUNDO - 91.0f, 17.0f));
     destino.draw(texto("[X]", recursos.fuente(), 16, sf::Color(255, 130, 130),
-                       Config::ANCHO_MUNDO - 43.0f, 202.0f));
+                       Config::ANCHO_MUNDO - 43.0f, 12.0f));
 
     NodoGenealogico* raiz = arbol.fundador(indiceFundador);
-    const float graphTop = 265.0f;
+    const float graphTop = 94.0f;
     const float graphBottom = Config::ALTO_MUNDO - 30.0f;
     const float espacioDisponible = graphBottom - graphTop;
     const int totalHojas = std::max(1, raiz->hojas);
@@ -450,8 +453,8 @@ void PanelGenetica::dibujarArbol(sf::RenderTarget& destino, GestorRecursos& recu
         destino.draw(caja);
         destino.draw(tip);
     }
-    destino.draw(texto("Vivos", recursos.fuente(), 11, sf::Color(90, 205, 135), 20.0f, 235.0f));
-    destino.draw(texto("Fallecidos", recursos.fuente(), 11, sf::Color(150, 155, 170), 80.0f, 235.0f));
+    destino.draw(texto("Vivos", recursos.fuente(), 11, sf::Color(90, 205, 135), 20.0f, 68.0f));
+    destino.draw(texto("Fallecidos", recursos.fuente(), 11, sf::Color(150, 155, 170), 80.0f, 68.0f));
     destino.draw(texto("Arrastra para mover | Rueda para zoom",
-                       recursos.fuente(), 11, sf::Color(165, 180, 200), 690.0f, 235.0f));
+                       recursos.fuente(), 11, sf::Color(165, 180, 200), 690.0f, 68.0f));
 }
